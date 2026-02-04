@@ -7,12 +7,24 @@ import { generateSectionPrompt } from '@/lib/ai/prompts/section-prompts';
 import { DetectedStack } from '@/types';
 import { aiOrchestrator } from '@/lib/ai/orchestrator';
 
-// ✅ Define proper types
+// ✅ Enhanced types with repo data
+interface RepoData {
+  files: Array<{ name: string; content: string }>;
+  structure: string[];
+  packageJson?: Record<string, unknown>;
+  existingReadme?: string;
+  envExample?: string;
+  hasDocker?: boolean;
+  hasTests?: boolean;
+  hasCI?: boolean;
+}
+
 interface GenerateRequestBody {
   sectionId: string;
   stack: DetectedStack;
   projectName: string;
   repoUrl?: string;
+  repoData?: RepoData; // ✅ Accept repo data
 }
 
 interface CachedResponse {
@@ -49,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json() as GenerateRequestBody;
-    const { sectionId, stack, projectName, repoUrl } = body;
+    const { sectionId, stack, projectName, repoUrl, repoData } = body;
 
     const section = SECTION_BRICKS.find(s => s.id === sectionId);
     if (!section) {
@@ -59,27 +71,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Enhanced context
-    const additionalContext = `
-Project Name: ${projectName}
-${repoUrl ? `Repository: ${repoUrl}` : ''}
-Detected Stack: ${stack.primary}
-Language: ${stack.language}
-Frameworks: ${stack.frameworks.join(', ')}
-Package Manager: ${stack.packageManager}
-Domain Hints: ${stack.domainHints?.join(', ') || 'None detected'}
-`;
+    // ✅ Build rich context from actual repo data
+    const additionalContext = buildEnhancedContext(repoData, stack, projectName, repoUrl);
 
-    const prompt = generateSectionPrompt(section, stack, projectName, additionalContext);
+    const prompt = generateSectionPrompt(section, stack, projectName, additionalContext, repoUrl);
 
-    // Redis Caching
-    const projectSpecificHash = Buffer.from(`${projectName}:${sectionId}:${stack.primary}`).toString('base64');
+    // Redis Caching - include repoData hash for better cache key
+    const contextHash = repoData 
+      ? Buffer.from(JSON.stringify(repoData.structure?.slice(0, 10) || [])).toString('base64').slice(0, 20)
+      : '';
+    const projectSpecificHash = Buffer.from(
+      `${projectName}:${sectionId}:${stack.primary}:${contextHash}`
+    ).toString('base64');
     const cacheKey = `generate:${projectSpecificHash}`;
 
-    // ✅ Properly typed cache retrieval
+    // Check cache
     const cached = await redis.get<CachedResponse>(cacheKey);
     if (cached) {
-      // Validate cached content before using it
       const isValid = 
         cached.content &&
         cached.content.length > 100 &&
@@ -108,7 +116,6 @@ Domain Hints: ${stack.domainHints?.join(', ') || 'None detected'}
     try {
       const response = await aiOrchestrator.generate(prompt, additionalContext);
 
-      // Validate generated content before caching
       const isValidResponse = 
         response.content &&
         response.content.length > 100 &&
@@ -123,7 +130,6 @@ Domain Hints: ${stack.domainHints?.join(', ') || 'None detected'}
         provider: response.provider,
       };
 
-      // Only cache valid responses
       if (isValidResponse) {
         await redis.set(cacheKey, result, { ex: 86400 });
         console.log(`💾 Cached valid response from ${response.provider} for ${sectionId}`);
@@ -169,4 +175,119 @@ Domain Hints: ${stack.domainHints?.join(', ') || 'None detected'}
       { status: 500 }
     );
   }
+}
+
+// ✅ Improved context builder - add to /api/generate/route.ts
+
+function buildEnhancedContext(
+  repoData: RepoData | undefined, 
+  stack: DetectedStack, 
+  projectName: string,
+  repoUrl?: string
+): string {
+  const sections: string[] = [];
+
+  sections.push(`=== PROJECT: ${projectName} ===`);
+  sections.push(`Stack: ${stack.primary} (${stack.language})`);
+  sections.push(`Package Manager: ${stack.packageManager}`);
+  
+  if (repoUrl) sections.push(`Repository: ${repoUrl}`);
+
+  if (!repoData) {
+    sections.push('\n⚠️ WARNING: No repository data available.');
+    return sections.join('\n');
+  }
+
+  // ✅ Package.json - THE MOST IMPORTANT SOURCE OF TRUTH
+  if (repoData.packageJson) {
+    const pkg = repoData.packageJson;
+    
+    sections.push('\n=== PACKAGE.JSON (PRIMARY SOURCE OF TRUTH) ===');
+    
+    // Description is key!
+    if (pkg.description) {
+      sections.push(`📌 DESCRIPTION: "${pkg.description}"`);
+      sections.push('   ^^^ USE THIS as the project description ^^^');
+    } else {
+      sections.push('📌 DESCRIPTION: Not provided - infer from dependencies');
+    }
+    
+    if (pkg.name) sections.push(`Name: ${pkg.name}`);
+    if (pkg.version) sections.push(`Version: ${pkg.version}`);
+    if (pkg.license) sections.push(`License: ${pkg.license}`);
+    
+    // Scripts - shows what the project can do
+    if (pkg.scripts && typeof pkg.scripts === 'object') {
+      const scripts = pkg.scripts as Record<string, string>;
+      sections.push('\n📜 ACTUAL SCRIPTS (document these):');
+      Object.entries(scripts).forEach(([name, command]) => {
+        sections.push(`  "${name}": "${command}"`);
+      });
+    }
+    
+    // Dependencies - reveals true functionality
+    if (pkg.dependencies && typeof pkg.dependencies === 'object') {
+      const deps = Object.keys(pkg.dependencies as Record<string, string>);
+      sections.push('\n📦 ACTUAL DEPENDENCIES (base features on these):');
+      sections.push(deps.join(', '));
+      
+      // Highlight AI dependencies
+      const aiDeps = deps.filter(d => 
+        d.includes('openai') || 
+        d.includes('anthropic') || 
+        d.includes('generative-ai') ||
+        d.includes('groq')
+      );
+      if (aiDeps.length > 0) {
+        sections.push(`\n🤖 AI DEPENDENCIES: ${aiDeps.join(', ')}`);
+        sections.push('   This suggests the project is an AI-powered tool!');
+      }
+    }
+  }
+
+  // Environment variables from .env.example
+  if (repoData.envExample) {
+    sections.push('\n=== ACTUAL .ENV.EXAMPLE CONTENT ===');
+    sections.push('Use THESE EXACT variables:');
+    sections.push(repoData.envExample);
+    sections.push('^^^ Copy these exactly, DO NOT invent new variables ^^^');
+  } else {
+    sections.push('\n⚠️ No .env.example found - infer variables from dependencies only');
+  }
+
+  // File structure
+  if (repoData.structure && repoData.structure.length > 0) {
+    sections.push('\n=== FILE STRUCTURE ===');
+    
+    // API routes are important
+    const apiRoutes = repoData.structure.filter(f => f.includes('/api/'));
+    if (apiRoutes.length > 0) {
+      sections.push('📡 API Routes found:');
+      apiRoutes.forEach(r => sections.push(`  ${r}`));
+    }
+    
+    // Main structure
+    const mainFiles = repoData.structure
+      .filter(f => !f.includes('/'))
+      .slice(0, 20);
+    sections.push('Root files:');
+    sections.push(mainFiles.join(', '));
+  }
+
+  // Project features
+  sections.push('\n=== DETECTED PROJECT FEATURES ===');
+  if (repoData.hasDocker) sections.push('✓ Docker support');
+  if (repoData.hasCI) sections.push('✓ CI/CD pipeline');
+  if (repoData.hasTests) sections.push('✓ Testing setup');
+
+  // ✅ CRITICAL INSTRUCTIONS
+  sections.push('\n=== ⚠️ GENERATION RULES ===');
+  sections.push('1. ONLY describe features that exist in the actual code');
+  sections.push('2. Use package.json description if available');
+  sections.push('3. Base features on ACTUAL dependencies, not assumptions');
+  sections.push('4. Use EXACT environment variables from .env.example');
+  sections.push('5. DO NOT invent: user profiles, commenting, blog posting, analytics');
+  sections.push('6. If it has AI deps (openai, anthropic) → describe as AI-powered tool');
+
+  return sections.join('\n');
 }

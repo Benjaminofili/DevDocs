@@ -27,107 +27,107 @@ export function generateSectionPrompt(
   
   const badgeInstructions = githubInfo 
     ? `
-BADGE INSTRUCTIONS:
-Use these EXACT values for badges:
-- Owner: ${githubInfo.owner}
-- Repo: ${githubInfo.repo}
-Example badge format:
+BADGE URLs (use exactly):
 ![License](https://img.shields.io/github/license/${githubInfo.owner}/${githubInfo.repo})
 ![Stars](https://img.shields.io/github/stars/${githubInfo.owner}/${githubInfo.repo}?style=social)
+![Issues](https://img.shields.io/github/issues/${githubInfo.owner}/${githubInfo.repo})
 `
     : `
-BADGE INSTRUCTIONS:
-Since no GitHub URL was provided, use generic/static badges or skip them:
+Use static badges:
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Version](https://img.shields.io/badge/version-1.0.0-green.svg)
 `;
 
+  // ✅ CRITICAL: Much stricter base prompt
   const basePrompt = `You are a technical writer creating a README section.
 
-PROJECT CONTEXT:
-- Name: ${projectName}
-- Stack: ${stack.primary}
-- Language: ${stack.language}
-- Frameworks: ${stack.frameworks.join(', ') || 'Standard stack'}
-- Package Manager: ${stack.packageManager}
-- Domain Hints: ${stack.domainHints?.join(', ') || 'None detected'}
-${repoUrl ? `- Repository: ${repoUrl}` : ''}
-${additionalContext ? `\nAdditional Context:\n${additionalContext}` : ''}
+=== CRITICAL RULES - READ CAREFULLY ===
+
+1. **ONLY describe features that ACTUALLY EXIST in the codebase**
+2. **DO NOT invent features** like "commenting system", "user profiles", "blog posting" unless you see actual code for them
+3. **Look at the ACTUAL dependencies and scripts** - these tell you what the project does
+4. **If the project has AI dependencies (openai, anthropic, gemini)** - it's likely an AI-powered tool
+5. **Base your description on package.json description, scripts, and actual file structure**
+6. **NEVER assume** - if you don't see evidence of a feature, don't mention it
+
+=== PROJECT CONTEXT ===
+${additionalContext || `Project: ${projectName}, Stack: ${stack.primary}`}
+
+=== WHAT TO LOOK FOR ===
+- package.json "description" field - USE THIS as the primary description
+- package.json "scripts" - these show what the project can do
+- Actual dependencies - these reveal the true functionality
+- File names in src/ - but DON'T assume "post" means "blog posting"
 
 ${badgeInstructions}
 
-CRITICAL INSTRUCTIONS:
-1. ANALYZE the project name and context to understand what this application actually DOES
-2. If the project name suggests a specific domain (e.g., "BakerzBite" = bakery, "TaskMaster" = task management), 
-   create content SPECIFIC to that domain, not generic tech content
-3. Generate REALISTIC, domain-specific examples and features
-4. AVOID generic React/Next.js descriptions unless the project is actually a generic tech demo
-5. Focus on the BUSINESS PURPOSE, not just the technology
-6. NEVER use generic templates or placeholders like "{{PROJECT_NAME}}" or "{{STACK}}"
-7. ALWAYS use the actual project name: "${projectName}"
-8. If domain hints are provided, USE THEM to create relevant content
-9. DO NOT use placeholders like "your-username", "your-repo", "[owner]", "[repo]"
-10. For badges, use the EXACT URLs provided above or static badges
+=== OUTPUT REQUIREMENTS ===
+- Clean, professional markdown
+- NO meta-commentary or explanations
+- ONLY real features based on actual code evidence
+- Under 250 words
+- No template variables like {{PROJECT_NAME}}
 
-DOMAIN-SPECIFIC GUIDELINES:
-- If "BakerzBite" or similar bakery name: Focus on menu management, online ordering, custom cakes, delivery tracking
-- If "Dua-Project" or similar religious app: Focus on prayers, religious content, spiritual features
-- If e-commerce hints: Focus on products, shopping cart, payments, order management
-- If social hints: Focus on user profiles, posts, comments, sharing features
-- If task management: Focus on tasks, projects, deadlines, collaboration
-
-TASK: Generate the "${section.name}" section.
-
-REQUIREMENTS:
-- Use clean, professional markdown
-- Be concise - NO explanations of "why this section matters"
-- Focus on actual content, not meta-commentary
-- Use realistic examples based on the detected ${stack.primary} stack AND the project's apparent domain
-- Keep it under 300 words
-- NEVER use template variables like {{PROJECT_NAME}} - use actual values
-
-OUTPUT FORMAT: Return ONLY the markdown content for this section. No preamble, no explanations.
+TASK: Generate the "${section.name}" section for ${projectName}.
 `;
 
   const sectionInstructions: Record<string, string> = {
-    header: `Generate a clean project header:
+    header: `Generate a project header based ONLY on actual project data.
 
 # ${projectName}
 
-${githubInfo ? `
-Add these working badges at the top:
-![License](https://img.shields.io/github/license/${githubInfo.owner}/${githubInfo.repo})
-![GitHub stars](https://img.shields.io/github/stars/${githubInfo.owner}/${githubInfo.repo}?style=social)
-![GitHub issues](https://img.shields.io/github/issues/${githubInfo.owner}/${githubInfo.repo})
-` : `
-Add static badges:
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-1.0.0-green.svg)
-`}
+${githubInfo ? `![License](https://img.shields.io/github/license/${githubInfo.owner}/${githubInfo.repo})
+![Stars](https://img.shields.io/github/stars/${githubInfo.owner}/${githubInfo.repo}?style=social)
+![Issues](https://img.shields.io/github/issues/${githubInfo.owner}/${githubInfo.repo})` : ''}
 
-IMPORTANT: Create a description based on what this project appears to do. If "${projectName}" suggests a bakery, restaurant, e-commerce, social app, etc., describe THAT business.
+INSTRUCTIONS:
+1. Look at package.json "description" field - USE IT if available
+2. If no description, infer from:
+   - Dependencies (AI libs = AI tool, react-markdown = documentation tool, etc.)
+   - Scripts available
+   - Project structure
 
-> Brief tagline describing the project purpose
+3. For Quick Start, use ACTUAL scripts from package.json:
+   - If "dev" script exists: npm run dev
+   - If "start" script exists: npm start
+   - Match the actual package manager detected
 
-## ✨ Highlights
-- List 3-4 key highlights (with emojis)
+4. List 3-4 REAL highlights based on actual dependencies, NOT imagined features
 
-## Quick Start
-\`\`\`bash
-${stack.packageManager === 'npm' ? 'npm install' : stack.packageManager === 'yarn' ? 'yarn' : stack.packageManager === 'pnpm' ? 'pnpm install' : 'pip install -r requirements.txt'}
-${stack.packageManager === 'npm' ? 'npm run dev' : stack.packageManager === 'yarn' ? 'yarn dev' : stack.packageManager === 'pnpm' ? 'pnpm dev' : 'python main.py'}
-\`\`\`
+DO NOT mention features like "user profiles", "commenting", "blog posting" unless you see actual code for them.`,
 
-Keep it simple and scannable.`,
+    features: `List ONLY features that are ACTUALLY implemented.
 
-    installation: `Create installation instructions for ${stack.primary}:
+## ✨ Features
+
+CRITICAL INSTRUCTIONS:
+1. Look at the ACTUAL dependencies in package.json
+2. Look at the ACTUAL file structure
+3. ONLY list features you can PROVE exist from the code
+
+Examples of what to look for:
+- Has react-markdown + AI libs → "AI-powered documentation generation"
+- Has @upstash/redis → "Redis caching for performance"
+- Has zustand → "State management"
+- Has tailwindcss → "Responsive UI with Tailwind CSS"
+
+DO NOT LIST:
+- "User profiles" (unless you see user authentication code)
+- "Commenting system" (unless you see comment-related APIs)
+- "Blog posting" (unless you see blog/post creation code)
+- "Analytics" (unless you see analytics dependencies)
+
+Format: 
+- 🎯 **Feature** - Brief description based on actual code`,
+
+    installation: `Create installation instructions using ACTUAL project data.
 
 ## 🚀 Installation
 
 ### Prerequisites
-- ${stack.language} (version X.X or higher)
+Based on package.json, list REAL requirements:
+- Node.js (check "engines" field, or default to v18+)
 - ${stack.packageManager}
-${stack.hasDocker ? '- Docker (optional)' : ''}
 
 ### Steps
 
@@ -139,141 +139,98 @@ ${stack.hasDocker ? '- Docker (optional)' : ''}
 
 2. **Install dependencies**
    \`\`\`bash
-   ${stack.packageManager === 'npm' ? 'npm install' : stack.packageManager === 'yarn' ? 'yarn' : stack.packageManager === 'pnpm' ? 'pnpm install' : 'pip install -r requirements.txt'}
+   ${stack.packageManager === 'npm' ? 'npm install' : stack.packageManager === 'yarn' ? 'yarn' : 'pnpm install'}
    \`\`\`
 
 3. **Set up environment**
    \`\`\`bash
    cp .env.example .env
-   # Edit .env with your configuration
    \`\`\`
 
 4. **Run the application**
+   Use the ACTUAL "dev" script from package.json:
    \`\`\`bash
-   ${stack.packageManager === 'npm' ? 'npm run dev' : stack.packageManager === 'yarn' ? 'yarn dev' : stack.packageManager === 'pnpm' ? 'pnpm dev' : 'python main.py'}
+   ${stack.packageManager === 'npm' ? 'npm run dev' : stack.packageManager === 'yarn' ? 'yarn dev' : 'pnpm dev'}
    \`\`\`
 
-Include domain-specific setup if applicable.`,
+NOTE: Only mention environment setup if .env.example actually exists in the project.`,
 
-    features: `List 5-6 features:
-
-## ✨ Features
-
-IMPORTANT: Create features based on the project's apparent domain, not generic tech features.
-
-Format each feature as:
-- 🎯 **Feature Name** - Brief description of what it does and why it matters
-
-Be specific to the apparent business domain of "${projectName}".`,
-
-    'tech-stack': `List the tech stack in a clean table:
+    'tech-stack': `Create tech stack based ONLY on actual dependencies.
 
 ## 🛠️ Tech Stack
+
+Read the dependencies from package.json and list them accurately:
 
 | Category | Technology |
 |----------|------------|
 | Framework | ${stack.primary} |
 | Language | ${stack.language} |
-${stack.frameworks.map(f => `| Library | ${f} |`).join('\n')}
 
-Add relevant categories: Frontend, Backend, Database, DevOps, Testing as appropriate.`,
+Add rows ONLY for dependencies that actually exist:
+- If has "tailwindcss" → Styling: Tailwind CSS
+- If has "prisma" → ORM: Prisma
+- If has "@upstash/redis" → Cache: Redis (Upstash)
+- If has "openai" → AI: OpenAI
+- If has "@google/generative-ai" → AI: Google Gemini
+- If has "zustand" → State: Zustand
 
-    environment: `Document environment variables:
+DO NOT add technologies that aren't in the dependencies.`,
+
+    environment: `Document environment variables ONLY from .env.example if it exists.
 
 ## ⚙️ Environment Variables
 
-Create a \`.env\` file in the root directory:
+CRITICAL: 
+1. If .env.example content is provided in context, use THOSE EXACT variables
+2. If no .env.example, list variables based on dependencies:
+   - Has openai → OPENAI_API_KEY
+   - Has @google/generative-ai → GOOGLE_AI_API_KEY  
+   - Has @upstash/redis → UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN
+   - Has groq-sdk → GROQ_API_KEY
 
+Format:
 \`\`\`env
-# Required
-DATABASE_URL=your_database_connection_string
-API_KEY=your_api_key
-
-# Optional
-DEBUG=false
-PORT=3000
+# Copy from .env.example and fill in your values
+VARIABLE_NAME=your_value_here
 \`\`\`
 
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| DATABASE_URL | Database connection string | Yes | - |
-| API_KEY | External API key | Yes | - |
-| DEBUG | Enable debug mode | No | false |
-| PORT | Server port | No | 3000 |
+| Variable | Description | Required |
+|----------|-------------|----------|
 
-Include domain-specific environment variables relevant to "${projectName}".`,
+DO NOT invent variables like "SOCIAL_MEDIA_INTEGRATION" or "BLOG_CMS_INTEGRATION" unless they exist in .env.example.`,
 
-    'api-docs': `Create API documentation:
+    'api-docs': `Document API endpoints ONLY if they actually exist.
 
 ## 📚 API Reference
 
-### Endpoints
+CRITICAL:
+1. Look at the actual API routes in the project (app/api/ or pages/api/)
+2. ONLY document endpoints that exist
+3. If you see /api/generate, /api/analyze, /api/clear-cache - document those
+4. DO NOT invent endpoints
 
-#### Get Resources
-\`\`\`http
-GET /api/resources
-\`\`\`
+If this is a ${stack.primary} project with app/api/ routes, document:
+- The actual routes from the file structure
+- What they do based on their names
+- Example request/response based on actual functionality`,
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| limit | number | Max items to return |
-| offset | number | Pagination offset |
-
-**Response**
-\`\`\`json
-{
-  "data": [],
-  "total": 0
-}
-\`\`\`
-
-Create realistic endpoints relevant to the domain of "${projectName}".`,
-
-    contributing: `Create contribution guidelines:
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (\`git checkout -b feature/amazing-feature\`)
-3. Commit your changes (\`git commit -m 'Add amazing feature'\`)
-4. Push to the branch (\`git push origin feature/amazing-feature\`)
-5. Open a Pull Request
-
-### Guidelines
-- Follow the existing code style
-- Write meaningful commit messages
-- Add tests for new features
-- Update documentation as needed`,
-
-    license: `Add license section:
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-Made with ❤️ by the ${projectName} team`,
-
-    deployment: `Deployment guide for ${stack.primary}:
+    deployment: `Create deployment instructions for ${stack.primary}.
 
 ## 🚀 Deployment
 
 ### Production Build
 \`\`\`bash
-${stack.packageManager === 'npm' ? 'npm run build' : stack.packageManager === 'yarn' ? 'yarn build' : stack.packageManager === 'pnpm' ? 'pnpm build' : 'python -m build'}
+${stack.packageManager === 'npm' ? 'npm run build' : stack.packageManager === 'yarn' ? 'yarn build' : 'pnpm build'}
 \`\`\`
 
 ${stack.primary === 'nextjs' ? `
-### Vercel (Recommended)
+### Vercel (Recommended for Next.js)
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
 
-1. Push your code to GitHub
-2. Import project in Vercel
-3. Configure environment variables
-4. Deploy!
+1. Push code to GitHub
+2. Import project in Vercel  
+3. Add environment variables
+4. Deploy
 ` : ''}
 
 ${stack.hasDocker ? `
@@ -282,7 +239,74 @@ ${stack.hasDocker ? `
 docker build -t ${projectName.toLowerCase()} .
 docker run -p 3000:3000 ${projectName.toLowerCase()}
 \`\`\`
-` : ''}`,
+` : ''}
+
+List only deployment options relevant to the actual project setup.`,
+
+    contributing: `Standard contributing guidelines.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (\`git checkout -b feature/your-feature\`)
+3. Commit your changes (\`git commit -m 'Add your feature'\`)
+4. Push to the branch (\`git push origin feature/your-feature\`)
+5. Open a Pull Request
+
+### Guidelines
+- Follow existing code style
+- Write meaningful commit messages
+- Add tests for new features
+- Update documentation as needed`,
+
+    license: `Add license section.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+Made with ❤️ for the developer community`,
+
+    testing: `Document testing ONLY if test scripts exist.
+
+## 🧪 Testing
+
+CRITICAL: Only include this if package.json has test scripts.
+
+If "test" script exists:
+\`\`\`bash
+${stack.packageManager === 'npm' ? 'npm test' : stack.packageManager === 'yarn' ? 'yarn test' : 'pnpm test'}
+\`\`\`
+
+If "test:watch" exists:
+\`\`\`bash
+${stack.packageManager === 'npm' ? 'npm run test:watch' : 'yarn test:watch'}
+\`\`\`
+
+If "test:coverage" exists:
+\`\`\`bash
+${stack.packageManager === 'npm' ? 'npm run test:coverage' : 'yarn test:coverage'}
+\`\`\`
+
+Only mention testing conventions if you see test files in the structure.`,
+
+    scripts: `Document ACTUAL scripts from package.json.
+
+## 📜 Available Scripts
+
+List ONLY scripts that exist in package.json:
+
+| Script | Command | Description |
+|--------|---------|-------------|
+
+For each script in package.json, explain what it does based on its command.
+Common scripts to look for: dev, build, start, lint, test, format, etc.
+
+DO NOT add scripts that don't exist.`,
   };
 
   return basePrompt + '\n\n' + (sectionInstructions[section.id] || section.howToWrite);

@@ -5,13 +5,13 @@
 import React, { useState } from 'react';
 import { Github, Upload, ArrowRight, Loader2 } from 'lucide-react';
 import { useReadmeStore } from '@/store/readme-store';
-import { SectionConfig } from '@/types';
 
 export function RepoInput() {
   const { 
     setProjectInfo, 
     setStack, 
     setAvailableSections, 
+    setRepoData, // ✅ Add setRepoData
     setCurrentStep,
     setLoading,
     isLoading 
@@ -68,13 +68,23 @@ export function RepoInput() {
         setStack(data.data.stack);
         setAvailableSections(data.data.suggestedSections);
         
+        // ✅ Store the repo data for accurate generation
+        if (data.data.repoData) {
+          setRepoData(data.data.repoData);
+          console.log('📦 Repo data stored:', {
+            files: data.data.repoData.structure?.length || 0,
+            hasPackageJson: !!data.data.repoData.packageJson,
+            hasEnvExample: !!data.data.repoData.envExample,
+          });
+        }
+        
         // Move to next step
         setCurrentStep('detect');
       } else {
         setError(data.error || 'Failed to analyze repository');
       }
-    } catch (error) {
-      console.error('Failed to analyze repo:', error);
+    } catch (err) {
+      console.error('Failed to analyze repo:', err);
       setError('An error occurred while analyzing the repository');
     } finally {
       setLoading(false);

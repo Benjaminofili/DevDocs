@@ -3,10 +3,31 @@
 import { create } from 'zustand';
 import { DetectedStack, SectionConfig, GeneratedSection } from '@/types';
 
+// ✅ Add interfaces for repo data
+interface RepoFile {
+    name: string;
+    content: string;
+}
+
+interface RepoData {
+    files: RepoFile[];
+    structure: string[];
+    packageJson?: Record<string, unknown>;
+    readmeExists?: boolean;
+    existingReadme?: string;
+    envExample?: string;
+    hasDocker?: boolean;
+    hasTests?: boolean;
+    hasCI?: boolean;
+}
+
 interface ReadmeState {
     // Project info
     projectName: string;
     repoUrl: string;
+
+    // ✅ NEW: Repository data
+    repoData: RepoData | null;
 
     // Stack detection
     stack: DetectedStack | null;
@@ -22,6 +43,7 @@ interface ReadmeState {
 
     // Actions
     setProjectInfo: (name: string, url: string) => void;
+    setRepoData: (data: RepoData) => void;
     setStack: (stack: DetectedStack) => void;
     setAvailableSections: (sections: SectionConfig[]) => void;
     toggleSection: (id: string) => void;
@@ -36,6 +58,7 @@ export const useReadmeStore = create<ReadmeState>((set) => ({
     // Initial state
     projectName: '',
     repoUrl: '',
+    repoData: null,
     stack: null,
     availableSections: [],
     selectedSectionIds: [],
@@ -45,6 +68,9 @@ export const useReadmeStore = create<ReadmeState>((set) => ({
 
     // Actions
     setProjectInfo: (name, url) => set({ projectName: name, repoUrl: url }),
+
+    // ✅ NEW: Set repo data
+    setRepoData: (data) => set({ repoData: data }),
 
     setStack: (stack) => set({ stack }),
 
@@ -70,7 +96,6 @@ export const useReadmeStore = create<ReadmeState>((set) => ({
         generatedSections: [...state.generatedSections, section]
     })),
 
-    // ✅ New action for full updates
     setGeneratedSections: (sections) => set({ generatedSections: sections }),
 
     setCurrentStep: (step) => set({ currentStep: step }),
@@ -80,6 +105,7 @@ export const useReadmeStore = create<ReadmeState>((set) => ({
     reset: () => set({
         projectName: '',
         repoUrl: '',
+        repoData: null,
         stack: null,
         availableSections: [],
         selectedSectionIds: [],

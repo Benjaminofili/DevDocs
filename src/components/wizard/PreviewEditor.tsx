@@ -16,6 +16,7 @@ export function PreviewEditor() {
     availableSections, 
     projectName,
     repoUrl,
+    repoData,
     currentStep, 
     setCurrentStep,
     selectedSectionIds,
@@ -124,6 +125,7 @@ export function PreviewEditor() {
             stack,
             projectName,
             repoUrl,
+            repoData
           }),
         });
 
@@ -169,21 +171,21 @@ export function PreviewEditor() {
   if (currentStep === 'generate') {
     return (
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-12 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 
+        <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-lg p-6 sm:p-8 md:p-12 text-center">
+          <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 
                           bg-blue-100 dark:bg-blue-900/30 rounded-full mb-4">
-            <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent 
+            <div className="w-6 h-6 sm:w-8 sm:h-8 border-3 border-blue-600 border-t-transparent 
                             rounded-full animate-spin"></div>
           </div>
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2">
             Generating your README...
           </h3>
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
             Our AI is crafting the perfect documentation for your {projectName} project
           </p>
           <div className="mt-6 space-y-2">
             {generatedSections.map((section) => (
-              <div key={section.id} className="text-sm text-gray-500 dark:text-gray-400">
+              <div key={section.id} className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                 ✓ Generated {availableSections.find(s => s.id === section.id)?.name}
               </div>
             ))}
@@ -195,144 +197,159 @@ export function PreviewEditor() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border 
+      <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-lg border 
                       border-gray-200 dark:border-gray-700">
         {/* Header */}
-        <div className="p-6 border-b border-slate-200 dark:border-slate-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">
+        <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            {/* Title */}
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-slate-900 dark:text-white truncate">
                 Generated Documentation
               </h2>
-              <p className="mt-1 text-slate-600 dark:text-slate-400">
+              <p className="mt-1 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
                 Review, edit, and download your professional README
               </p>
             </div>
-            <div className="flex gap-2">
+            
+            {/* Action Buttons - Stack on mobile */}
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={handleClearCache}
                 disabled={isClearingCache}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-900/20 
-                         hover:bg-red-200 dark:hover:bg-red-900/30 text-red-700 dark:text-red-300 
-                         rounded-lg transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 
+                         bg-red-100 dark:bg-red-900/20 hover:bg-red-200 dark:hover:bg-red-900/30 
+                         text-red-700 dark:text-red-300 rounded-lg transition-colors 
+                         disabled:opacity-50 text-sm"
               >
-                <Trash2 className="w-4 h-4" />
-                {isClearingCache ? 'Clearing...' : 'Clear Cache'}
+                <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">{isClearingCache ? 'Clearing...' : 'Clear'}</span>
               </button>
               <button
                 onClick={handleCopy}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 
-                         dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 
-                         rounded-lg transition-colors"
+                className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 
+                         bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 
+                         rounded-lg transition-colors text-sm"
               >
                 {copied ? (
                   <>
-                    <Check className="w-4 h-4 text-emerald-600" />
-                    Copied!
+                    <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
+                    <span className="hidden xs:inline">Copied!</span>
                   </>
                 ) : (
                   <>
-                    <Copy className="w-4 h-4" />
-                    Copy
+                    <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="hidden xs:inline">Copy</span>
                   </>
                 )}
               </button>
               <button
                 onClick={handleDownload}
-                className="btn-professional inline-flex items-center gap-2 px-4 py-2 
-                         text-white font-medium rounded-lg"
+                className="btn-professional inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 
+                         text-white font-medium rounded-lg text-sm"
               >
-                <Download className="w-4 h-4" />
-                Download
+                <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">Download</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Tab Selector */}
-        <div className="border-b border-slate-200 dark:border-slate-700">
-          <div className="flex">
+        {/* Tab Selector - Responsive */}
+        <div className="border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
+          <div className="flex min-w-max">
             <button
               onClick={() => setActiveTab('preview')}
-              className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors
+              className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 sm:py-3 
+                        font-medium transition-colors text-sm sm:text-base whitespace-nowrap
                 ${activeTab === 'preview'
                   ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
             >
               <Eye className="w-4 h-4" />
-              Preview
+              <span className="hidden xs:inline">Preview</span>
             </button>
             <button
               onClick={() => setActiveTab('edit')}
-              className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors
+              className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 sm:py-3 
+                        font-medium transition-colors text-sm sm:text-base whitespace-nowrap
                 ${activeTab === 'edit'
                   ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
             >
               <Edit3 className="w-4 h-4" />
-              Edit
+              <span className="hidden xs:inline">Edit</span>
             </button>
             <button
               onClick={() => setActiveTab('raw')}
-              className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors
+              className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 sm:py-3 
+                        font-medium transition-colors text-sm sm:text-base whitespace-nowrap
                 ${activeTab === 'raw'
                   ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
             >
               <Code className="w-4 h-4" />
-              Raw Markdown
+              <span className="hidden xs:inline">Raw</span>
             </button>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
+        {/* Content - Responsive Padding */}
+        <div className="p-4 sm:p-6">
           {activeTab === 'preview' ? (
-            <div className="readme-preview bg-white dark:bg-slate-900 p-8 rounded-lg border border-slate-200 dark:border-slate-700">
+            <div className="readme-preview bg-white dark:bg-slate-900 p-4 sm:p-6 md:p-8 
+                          rounded-lg border border-slate-200 dark:border-slate-700 
+                          overflow-x-auto">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeRaw]}
                 components={{
-                  // Headings
+                  // Headings - Responsive sizes
                   h1: ({ children }) => (
-                    <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4 pb-2 border-b border-slate-200 dark:border-slate-700">
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 dark:text-white 
+                                 mb-3 sm:mb-4 pb-2 border-b border-slate-200 dark:border-slate-700">
                       {children}
                     </h1>
                   ),
                   h2: ({ children }) => (
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white mt-8 mb-4 pb-2 border-b border-slate-200 dark:border-slate-700">
+                    <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white 
+                                 mt-6 sm:mt-8 mb-3 sm:mb-4 pb-2 border-b border-slate-200 dark:border-slate-700">
                       {children}
                     </h2>
                   ),
                   h3: ({ children }) => (
-                    <h3 className="text-xl font-semibold text-slate-900 dark:text-white mt-6 mb-3">
+                    <h3 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-white 
+                                 mt-4 sm:mt-6 mb-2 sm:mb-3">
                       {children}
                     </h3>
                   ),
                   h4: ({ children }) => (
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white mt-4 mb-2">
+                    <h4 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white 
+                                 mt-3 sm:mt-4 mb-2">
                       {children}
                     </h4>
                   ),
                   
                   // Paragraph
                   p: ({ children }) => (
-                    <p className="text-slate-700 dark:text-slate-300 mb-4 leading-relaxed">
+                    <p className="text-sm sm:text-base text-slate-700 dark:text-slate-300 mb-4 leading-relaxed">
                       {children}
                     </p>
                   ),
                   
                   // Lists
                   ul: ({ children }) => (
-                    <ul className="list-disc list-inside space-y-2 mb-4 text-slate-700 dark:text-slate-300">
+                    <ul className="list-disc list-inside space-y-2 mb-4 text-sm sm:text-base 
+                                 text-slate-700 dark:text-slate-300 pl-2">
                       {children}
                     </ul>
                   ),
                   ol: ({ children }) => (
-                    <ol className="list-decimal list-inside space-y-2 mb-4 text-slate-700 dark:text-slate-300">
+                    <ol className="list-decimal list-inside space-y-2 mb-4 text-sm sm:text-base 
+                                 text-slate-700 dark:text-slate-300 pl-2">
                       {children}
                     </ol>
                   ),
@@ -340,40 +357,46 @@ export function PreviewEditor() {
                     <li className="text-slate-700 dark:text-slate-300">{children}</li>
                   ),
                   
-                  // Code
+                  // Code - Responsive
                   code: ({ inline, className, children }) => {
                     if (inline) {
                       return (
-                        <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-red-600 dark:text-red-400 text-sm font-mono">
+                        <code className="px-1 sm:px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 
+                                       text-red-600 dark:text-red-400 text-xs sm:text-sm font-mono">
                           {children}
                         </code>
                       );
                     }
                     return (
-                      <code className={`${className} font-mono text-sm`}>
+                      <code className={`${className} font-mono text-xs sm:text-sm`}>
                         {children}
                       </code>
                     );
                   },
                   pre: ({ children }) => (
-                    <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto mb-4 text-sm">
+                    <pre className="bg-slate-900 text-slate-100 p-3 sm:p-4 rounded-lg 
+                                  overflow-x-auto mb-4 text-xs sm:text-sm">
                       {children}
                     </pre>
                   ),
                   
                   // Blockquote
                   blockquote: ({ children }) => (
-                    <blockquote className="border-l-4 border-blue-500 pl-4 italic my-4 text-slate-600 dark:text-slate-400">
+                    <blockquote className="border-l-4 border-blue-500 pl-3 sm:pl-4 italic my-4 
+                                         text-sm sm:text-base text-slate-600 dark:text-slate-400">
                       {children}
                     </blockquote>
                   ),
                   
-                  // Table
+                  // Table - Better mobile overflow
                   table: ({ children }) => (
-                    <div className="overflow-x-auto mb-4">
-                      <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg">
-                        {children}
-                      </table>
+                    <div className="overflow-x-auto mb-4 -mx-4 sm:mx-0">
+                      <div className="inline-block min-w-full align-middle px-4 sm:px-0">
+                        <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700 
+                                        border border-slate-200 dark:border-slate-700 rounded-lg">
+                          {children}
+                        </table>
+                      </div>
                     </div>
                   ),
                   thead: ({ children }) => (
@@ -392,12 +415,13 @@ export function PreviewEditor() {
                     </tr>
                   ),
                   th: ({ children }) => (
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                    <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold 
+                                 text-slate-600 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">
                       {children}
                     </th>
                   ),
                   td: ({ children }) => (
-                    <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
+                    <td className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
                       {children}
                     </td>
                   ),
@@ -406,7 +430,7 @@ export function PreviewEditor() {
                   a: ({ href, children }) => (
                     <a 
                       href={href} 
-                      className="text-blue-600 dark:text-blue-400 hover:underline" 
+                      className="text-blue-600 dark:text-blue-400 hover:underline break-words" 
                       target="_blank" 
                       rel="noopener noreferrer"
                     >
@@ -416,12 +440,9 @@ export function PreviewEditor() {
                   
                   // Images (including badges)
                   img: ({ src, alt }) => {
-                    // Fix common badge URL issues
                     let fixedSrc = src || '';
                     
-                    // If it's a shields.io badge with placeholder, try to fix it
                     if (fixedSrc.includes('shields.io') && githubInfo) {
-                      // Replace common placeholders
                       fixedSrc = fixedSrc
                         .replace(/your-username/g, githubInfo.owner)
                         .replace(/your-repo/g, githubInfo.repo)
@@ -432,7 +453,6 @@ export function PreviewEditor() {
                         .replace(/\[repo\]/g, githubInfo.repo);
                     }
                     
-                    // Check if it's a badge (shields.io or similar)
                     const isBadge = fixedSrc.includes('shields.io') || 
                                    fixedSrc.includes('badge') || 
                                    fixedSrc.includes('img.shields');
@@ -442,9 +462,8 @@ export function PreviewEditor() {
                         <img 
                           src={fixedSrc} 
                           alt={alt || 'badge'} 
-                          className="inline-block h-5 mr-1"
+                          className="inline-block h-4 sm:h-5 mr-1"
                           onError={(e) => {
-                            // Hide broken badge images
                             (e.target as HTMLImageElement).style.display = 'none';
                           }}
                         />
@@ -465,7 +484,7 @@ export function PreviewEditor() {
                   
                   // Horizontal rule
                   hr: () => (
-                    <hr className="my-8 border-slate-200 dark:border-slate-700" />
+                    <hr className="my-6 sm:my-8 border-slate-200 dark:border-slate-700" />
                   ),
                   
                   // Strong/Bold
@@ -488,14 +507,14 @@ export function PreviewEditor() {
             </div>
           ) : activeTab === 'edit' ? (
             <div className="space-y-4">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-2">
                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   Edit README Content
                 </label>
                 <button
                   onClick={handleSaveEdit}
-                  className="btn-professional inline-flex items-center gap-2 px-4 py-2 
-                           text-white font-medium rounded-lg text-sm"
+                  className="btn-professional inline-flex items-center justify-center gap-2 
+                           px-4 py-2 text-white font-medium rounded-lg text-sm"
                 >
                   <Check className="w-4 h-4" />
                   Save Changes
@@ -504,27 +523,32 @@ export function PreviewEditor() {
               <textarea
                 value={editableContent}
                 onChange={(e) => setEditableContent(e.target.value)}
-                className="w-full h-[600px] p-4 border border-slate-300 dark:border-slate-600 rounded-lg 
-                         focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-900 
-                         dark:text-slate-100 font-mono text-sm resize-none leading-relaxed"
+                className="w-full h-[400px] sm:h-[500px] md:h-[600px] p-3 sm:p-4 
+                         border border-slate-300 dark:border-slate-600 rounded-lg 
+                         focus:ring-2 focus:ring-blue-500 focus:border-transparent 
+                         dark:bg-slate-900 dark:text-slate-100 font-mono 
+                         text-xs sm:text-sm resize-none leading-relaxed"
                 placeholder="Edit your README content here..."
                 spellCheck={false}
               />
-              <div className="text-sm text-slate-500 dark:text-slate-400">
+              <div className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                 💡 Tip: Use Markdown syntax for formatting. Changes will be reflected in the preview tab.
               </div>
             </div>
           ) : (
             <div className="relative">
-              <pre className="bg-slate-900 text-slate-100 p-6 rounded-lg overflow-x-auto max-h-[600px] overflow-y-auto">
-                <code className="text-sm font-mono leading-relaxed whitespace-pre-wrap">
+              <pre className="bg-slate-900 text-slate-100 p-4 sm:p-6 rounded-lg 
+                           overflow-x-auto max-h-[400px] sm:max-h-[500px] md:max-h-[600px] 
+                           overflow-y-auto">
+                <code className="text-xs sm:text-sm font-mono leading-relaxed whitespace-pre-wrap break-words">
                   {fullReadme}
                 </code>
               </pre>
               <button
                 onClick={handleCopy}
-                className="absolute top-4 right-4 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 
-                         text-slate-200 rounded text-sm transition-colors"
+                className="absolute top-2 sm:top-4 right-2 sm:right-4 px-2 sm:px-3 py-1 sm:py-1.5 
+                         bg-slate-700 hover:bg-slate-600 text-slate-200 rounded 
+                         text-xs sm:text-sm transition-colors"
               >
                 {copied ? 'Copied!' : 'Copy'}
               </button>
@@ -532,39 +556,42 @@ export function PreviewEditor() {
           )}
         </div>
 
-        {/* Footer Actions */}
-        <div className="p-6 border-t border-slate-200 dark:border-slate-700 bg-slate-50 
-                        dark:bg-slate-900/50 flex items-center justify-between rounded-b-2xl">
-          <button
-            onClick={() => setCurrentStep('select')}
-            className="inline-flex items-center gap-2 px-4 py-2 text-slate-600 
-                     dark:text-slate-400 hover:text-slate-900 dark:hover:text-white 
-                     transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Back to Sections
-          </button>
-
-          <div className="flex gap-2">
-            {activeTab === 'edit' && (
-              <button
-                onClick={handleSaveEdit}
-                className="btn-professional inline-flex items-center gap-2 px-4 py-2 
-                         text-white font-medium rounded-lg"
-              >
-                <Check className="w-4 h-4" />
-                Save Changes
-              </button>
-            )}
+        {/* Footer Actions - Responsive Stack */}
+        <div className="p-4 sm:p-6 border-t border-slate-200 dark:border-slate-700 
+                        bg-slate-50 dark:bg-slate-900/50 rounded-b-xl sm:rounded-b-2xl">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center 
+                        sm:justify-between gap-3">
             <button
-              onClick={handleRegenerate}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 
-                       dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 
-                       rounded-lg transition-colors"
+              onClick={() => setCurrentStep('select')}
+              className="inline-flex items-center justify-center sm:justify-start gap-2 
+                       px-4 py-2 text-slate-600 dark:text-slate-400 
+                       hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
             >
-              <RefreshCw className="w-4 h-4" />
-              Regenerate
+              <ChevronLeft className="w-4 h-4" />
+              Back to Sections
             </button>
+
+            <div className="flex flex-col xs:flex-row gap-2">
+              {activeTab === 'edit' && (
+                <button
+                  onClick={handleSaveEdit}
+                  className="btn-professional inline-flex items-center justify-center gap-2 
+                           px-4 py-2 text-white font-medium rounded-lg text-sm"
+                >
+                  <Check className="w-4 h-4" />
+                  Save Changes
+                </button>
+              )}
+              <button
+                onClick={handleRegenerate}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 
+                         bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 
+                         dark:hover:bg-slate-600 rounded-lg transition-colors text-sm"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Regenerate
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -19,6 +19,8 @@ export function SectionSelector() {
     setCurrentStep,
     addGeneratedSection,
     projectName,
+    repoUrl,
+    repoData, // ✅ Add repoData from store
     isLoading,
     setGeneratedSections
   } = useReadmeStore();
@@ -31,7 +33,7 @@ export function SectionSelector() {
     setLoading(true);
     setCurrentStep('generate');
     
-    // Clear previous generated sections if any (optional, but good for cleanliness)
+    // Clear previous generated sections
     setGeneratedSections([]);
     
     const generated: GeneratedSection[] = [];
@@ -40,9 +42,9 @@ export function SectionSelector() {
       const sectionId = selectedSectionIds[i];
       
       try {
-        // ✅ Add 6 second delay to be safely within Gemini's 15 RPM limit (12 RPM target)
+        // Add delay between requests to avoid rate limits
         if (i > 0) {
-          await new Promise(resolve => setTimeout(resolve, 6000));
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
 
         const response = await fetch('/api/generate', {
@@ -52,6 +54,8 @@ export function SectionSelector() {
             sectionId,
             stack,
             projectName,
+            repoUrl, // ✅ Pass repoUrl
+            repoData, // ✅ Pass actual repo data
           }),
         });
 
@@ -77,6 +81,13 @@ export function SectionSelector() {
         }
       } catch (error) {
         console.error(`Failed to generate ${sectionId}:`, error);
+        const errorSection: GeneratedSection = {
+          id: sectionId,
+          content: `## ${sectionId.charAt(0).toUpperCase() + sectionId.slice(1)}\n\n*Error generating content. Please try again.*`,
+          explanation: 'An error occurred during generation.',
+        };
+        generated.push(errorSection);
+        addGeneratedSection(errorSection);
       }
     }
 
@@ -104,6 +115,31 @@ export function SectionSelector() {
               ))}
             </ul>
           )}
+        </div>
+      )}
+
+      {/* Repository Info Banner - Show what was detected */}
+      {repoData && (
+        <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
+          <div className="flex items-start gap-3">
+            <div className="text-green-600 dark:text-green-400">
+              <Check className="w-5 h-5" />
+            </div>
+            <div className="flex-1">
+              <h4 className="font-medium text-green-900 dark:text-green-100 mb-1">
+                Repository Analyzed Successfully
+              </h4>
+              <div className="text-sm text-green-700 dark:text-green-300 space-y-1">
+                <p>📁 {repoData.structure?.length || 0} files detected</p>
+                {repoData.packageJson && (
+                  <p>📦 Package: {(repoData.packageJson as any).name || projectName} v{(repoData.packageJson as any).version || '1.0.0'}</p>
+                )}
+                {repoData.hasDocker && <p>🐳 Docker configuration found</p>}
+                {repoData.hasTests && <p>🧪 Test suite detected</p>}
+                {repoData.hasCI && <p>🔄 CI/CD pipeline configured</p>}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

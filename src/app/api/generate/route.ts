@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// ✅ Improved context builder - add to /api/generate/route.ts
+// In /api/generate/route.ts - Update buildEnhancedContext
 
 function buildEnhancedContext(
   repoData: RepoData | undefined, 
@@ -188,106 +188,75 @@ function buildEnhancedContext(
   const sections: string[] = [];
 
   sections.push(`=== PROJECT: ${projectName} ===`);
-  sections.push(`Stack: ${stack.primary} (${stack.language})`);
-  sections.push(`Package Manager: ${stack.packageManager}`);
   
-  if (repoUrl) sections.push(`Repository: ${repoUrl}`);
-
   if (!repoData) {
-    sections.push('\n⚠️ WARNING: No repository data available.');
     return sections.join('\n');
   }
 
-  // ✅ Package.json - THE MOST IMPORTANT SOURCE OF TRUTH
+  // ✅ Analyze file structure for purpose detection
+  if (repoData.structure) {
+    const structure = repoData.structure;
+    
+    // Key indicators
+    const hasGenerateApi = structure.some(f => f.includes('api/generate'));
+    const hasAnalyzeApi = structure.some(f => f.includes('api/analyze'));
+    const hasReadmeComponents = structure.some(f => 
+      f.toLowerCase().includes('readme') || 
+      f.toLowerCase().includes('preview') ||
+      f.toLowerCase().includes('wizard')
+    );
+    
+    if (hasGenerateApi || hasAnalyzeApi || hasReadmeComponents) {
+      sections.push('\n🎯 PROJECT TYPE DETECTED: README/Documentation Generator');
+      sections.push('This project generates documentation using AI.');
+    }
+    
+    // API routes
+    const apiRoutes = structure.filter(f => f.includes('/api/'));
+    if (apiRoutes.length > 0) {
+      sections.push('\n📡 API ROUTES (shows what the project does):');
+      apiRoutes.forEach(r => sections.push(`  - ${r}`));
+    }
+    
+    // Components
+    const components = structure.filter(f => 
+      f.includes('/components/') || f.includes('wizard') || f.includes('preview')
+    );
+    if (components.length > 0) {
+      sections.push('\n🧩 KEY COMPONENTS:');
+      components.slice(0, 10).forEach(c => sections.push(`  - ${c}`));
+    }
+  }
+
+  // Package.json
   if (repoData.packageJson) {
     const pkg = repoData.packageJson;
     
-    sections.push('\n=== PACKAGE.JSON (PRIMARY SOURCE OF TRUTH) ===');
-    
-    // Description is key!
     if (pkg.description) {
-      sections.push(`📌 DESCRIPTION: "${pkg.description}"`);
-      sections.push('   ^^^ USE THIS as the project description ^^^');
-    } else {
-      sections.push('📌 DESCRIPTION: Not provided - infer from dependencies');
+      sections.push(`\n📌 OFFICIAL DESCRIPTION: "${pkg.description}"`);
     }
     
-    if (pkg.name) sections.push(`Name: ${pkg.name}`);
-    if (pkg.version) sections.push(`Version: ${pkg.version}`);
-    if (pkg.license) sections.push(`License: ${pkg.license}`);
-    
-    // Scripts - shows what the project can do
-    if (pkg.scripts && typeof pkg.scripts === 'object') {
-      const scripts = pkg.scripts as Record<string, string>;
-      sections.push('\n📜 ACTUAL SCRIPTS (document these):');
-      Object.entries(scripts).forEach(([name, command]) => {
-        sections.push(`  "${name}": "${command}"`);
+    // Scripts
+    if (pkg.scripts) {
+      sections.push('\n📜 SCRIPTS:');
+      Object.entries(pkg.scripts as Record<string, string>).forEach(([name, cmd]) => {
+        sections.push(`  ${name}: ${cmd}`);
       });
     }
     
-    // Dependencies - reveals true functionality
-    if (pkg.dependencies && typeof pkg.dependencies === 'object') {
+    // Dependencies
+    if (pkg.dependencies) {
       const deps = Object.keys(pkg.dependencies as Record<string, string>);
-      sections.push('\n📦 ACTUAL DEPENDENCIES (base features on these):');
+      sections.push('\n📦 DEPENDENCIES:');
       sections.push(deps.join(', '));
-      
-      // Highlight AI dependencies
-      const aiDeps = deps.filter(d => 
-        d.includes('openai') || 
-        d.includes('anthropic') || 
-        d.includes('generative-ai') ||
-        d.includes('groq')
-      );
-      if (aiDeps.length > 0) {
-        sections.push(`\n🤖 AI DEPENDENCIES: ${aiDeps.join(', ')}`);
-        sections.push('   This suggests the project is an AI-powered tool!');
-      }
     }
   }
 
-  // Environment variables from .env.example
+  // Environment variables
   if (repoData.envExample) {
-    sections.push('\n=== ACTUAL .ENV.EXAMPLE CONTENT ===');
-    sections.push('Use THESE EXACT variables:');
+    sections.push('\n🔐 ENVIRONMENT VARIABLES (.env.example):');
     sections.push(repoData.envExample);
-    sections.push('^^^ Copy these exactly, DO NOT invent new variables ^^^');
-  } else {
-    sections.push('\n⚠️ No .env.example found - infer variables from dependencies only');
   }
-
-  // File structure
-  if (repoData.structure && repoData.structure.length > 0) {
-    sections.push('\n=== FILE STRUCTURE ===');
-    
-    // API routes are important
-    const apiRoutes = repoData.structure.filter(f => f.includes('/api/'));
-    if (apiRoutes.length > 0) {
-      sections.push('📡 API Routes found:');
-      apiRoutes.forEach(r => sections.push(`  ${r}`));
-    }
-    
-    // Main structure
-    const mainFiles = repoData.structure
-      .filter(f => !f.includes('/'))
-      .slice(0, 20);
-    sections.push('Root files:');
-    sections.push(mainFiles.join(', '));
-  }
-
-  // Project features
-  sections.push('\n=== DETECTED PROJECT FEATURES ===');
-  if (repoData.hasDocker) sections.push('✓ Docker support');
-  if (repoData.hasCI) sections.push('✓ CI/CD pipeline');
-  if (repoData.hasTests) sections.push('✓ Testing setup');
-
-  // ✅ CRITICAL INSTRUCTIONS
-  sections.push('\n=== ⚠️ GENERATION RULES ===');
-  sections.push('1. ONLY describe features that exist in the actual code');
-  sections.push('2. Use package.json description if available');
-  sections.push('3. Base features on ACTUAL dependencies, not assumptions');
-  sections.push('4. Use EXACT environment variables from .env.example');
-  sections.push('5. DO NOT invent: user profiles, commenting, blog posting, analytics');
-  sections.push('6. If it has AI deps (openai, anthropic) → describe as AI-powered tool');
 
   return sections.join('\n');
 }

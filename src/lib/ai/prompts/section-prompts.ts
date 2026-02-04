@@ -18,241 +18,209 @@ function extractGitHubInfo(repoUrl?: string): GitHubInfo | null {
 
 export function generateSectionPrompt(
   section: SectionConfig,
-  stack: DetectedStack,
   projectName: string,
+  stack: DetectedStack,
   additionalContext?: string,
   repoUrl?: string
 ): string {
   const githubInfo = extractGitHubInfo(repoUrl);
   
+  // ✅ CRITICAL: Analyze context to determine actual project purpose
+  const projectPurpose = inferProjectPurpose(additionalContext || '', projectName);
+  
   const badgeInstructions = githubInfo 
     ? `
-BADGE URLs (use exactly):
+Badges (use exactly):
 ![License](https://img.shields.io/github/license/${githubInfo.owner}/${githubInfo.repo})
 ![Stars](https://img.shields.io/github/stars/${githubInfo.owner}/${githubInfo.repo}?style=social)
 ![Issues](https://img.shields.io/github/issues/${githubInfo.owner}/${githubInfo.repo})
 `
-    : `
-Use static badges:
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-1.0.0-green.svg)
-`;
+    : '';
 
-  // ✅ CRITICAL: Much stricter base prompt
   const basePrompt = `You are a technical writer creating a README section.
 
-=== CRITICAL RULES - READ CAREFULLY ===
+=== PROJECT PURPOSE (USE THIS!) ===
+${projectPurpose}
 
-1. **ONLY describe features that ACTUALLY EXIST in the codebase**
-2. **DO NOT invent features** like "commenting system", "user profiles", "blog posting" unless you see actual code for them
-3. **Look at the ACTUAL dependencies and scripts** - these tell you what the project does
-4. **If the project has AI dependencies (openai, anthropic, gemini)** - it's likely an AI-powered tool
-5. **Base your description on package.json description, scripts, and actual file structure**
-6. **NEVER assume** - if you don't see evidence of a feature, don't mention it
+=== STRICT RULES ===
+1. Use the PROJECT PURPOSE above as the main description
+2. ONLY describe features based on actual code/dependencies
+3. DO NOT invent features
+4. If you see API routes like /api/generate, /api/analyze → this is a GENERATOR tool
+5. If you see react-markdown + AI libs → this is a DOCUMENTATION tool
 
-=== PROJECT CONTEXT ===
+=== PROJECT DATA ===
 ${additionalContext || `Project: ${projectName}, Stack: ${stack.primary}`}
-
-=== WHAT TO LOOK FOR ===
-- package.json "description" field - USE THIS as the primary description
-- package.json "scripts" - these show what the project can do
-- Actual dependencies - these reveal the true functionality
-- File names in src/ - but DON'T assume "post" means "blog posting"
 
 ${badgeInstructions}
 
-=== OUTPUT REQUIREMENTS ===
-- Clean, professional markdown
-- NO meta-commentary or explanations
-- ONLY real features based on actual code evidence
-- Under 250 words
-- No template variables like {{PROJECT_NAME}}
+OUTPUT: Clean markdown, no meta-commentary, under 250 words.
 
-TASK: Generate the "${section.name}" section for ${projectName}.
+TASK: Generate the "${section.name}" section.
 `;
 
   const sectionInstructions: Record<string, string> = {
-    header: `Generate a project header based ONLY on actual project data.
-
-# ${projectName}
+    header: `# ${projectName}
 
 ${githubInfo ? `![License](https://img.shields.io/github/license/${githubInfo.owner}/${githubInfo.repo})
 ![Stars](https://img.shields.io/github/stars/${githubInfo.owner}/${githubInfo.repo}?style=social)
 ![Issues](https://img.shields.io/github/issues/${githubInfo.owner}/${githubInfo.repo})` : ''}
 
 INSTRUCTIONS:
-1. Look at package.json "description" field - USE IT if available
-2. If no description, infer from:
-   - Dependencies (AI libs = AI tool, react-markdown = documentation tool, etc.)
-   - Scripts available
-   - Project structure
+1. Write a clear 1-2 sentence description of WHAT THIS PROJECT DOES
+2. Use the PROJECT PURPOSE from above
+3. For ${projectName}:
+   - If it has /api/generate, /api/analyze → "A tool that generates/analyzes X"
+   - If it has react-markdown + AI deps → "An AI-powered documentation tool"
+   - If it has readme, docs in name/routes → "A README/documentation generator"
 
-3. For Quick Start, use ACTUAL scripts from package.json:
-   - If "dev" script exists: npm run dev
-   - If "start" script exists: npm start
-   - Match the actual package manager detected
+4. Quick Start with actual scripts:
+\`\`\`bash
+npm install
+npm run dev
+\`\`\`
 
-4. List 3-4 REAL highlights based on actual dependencies, NOT imagined features
+5. List 3-4 highlights based on ACTUAL dependencies only`,
 
-DO NOT mention features like "user profiles", "commenting", "blog posting" unless you see actual code for them.`,
+    features: `## ✨ Features
 
-    features: `List ONLY features that are ACTUALLY implemented.
+INSTRUCTIONS:
+1. Each feature must be based on an ACTUAL dependency or API route
+2. Format: - **Feature Name** - Description
 
-## ✨ Features
+For ${projectName}, look for:
+- API routes (what they do)
+- UI components (what they render)
+- Dependencies (what functionality they provide)
 
-CRITICAL INSTRUCTIONS:
-1. Look at the ACTUAL dependencies in package.json
-2. Look at the ACTUAL file structure
-3. ONLY list features you can PROVE exist from the code
+Example mapping:
+- Has /api/generate + AI libs → "AI-Powered Generation - Uses multiple AI providers to generate content"
+- Has /api/analyze → "Repository Analysis - Analyzes project structure and dependencies"
+- Has react-markdown → "Markdown Preview - Live preview of generated content"
+- Has zustand → "State Management - Manages application state efficiently"
+- Has @upstash/redis → "Caching - Caches results for faster responses"
+- Has @upstash/ratelimit → "Rate Limiting - Prevents API abuse"
 
-Examples of what to look for:
-- Has react-markdown + AI libs → "AI-powered documentation generation"
-- Has @upstash/redis → "Redis caching for performance"
-- Has zustand → "State management"
-- Has tailwindcss → "Responsive UI with Tailwind CSS"
+DO NOT add features without evidence in the code.`,
 
-DO NOT LIST:
-- "User profiles" (unless you see user authentication code)
-- "Commenting system" (unless you see comment-related APIs)
-- "Blog posting" (unless you see blog/post creation code)
-- "Analytics" (unless you see analytics dependencies)
-
-Format: 
-- 🎯 **Feature** - Brief description based on actual code`,
-
-    installation: `Create installation instructions using ACTUAL project data.
-
-## 🚀 Installation
+    installation: `## 🚀 Installation
 
 ### Prerequisites
-Based on package.json, list REAL requirements:
-- Node.js (check "engines" field, or default to v18+)
-- ${stack.packageManager}
+- Node.js v18 or higher
+- npm (or yarn/pnpm)
 
 ### Steps
 
 1. **Clone the repository**
-   \`\`\`bash
-   git clone ${repoUrl || `https://github.com/username/${projectName}.git`}
-   cd ${projectName}
-   \`\`\`
+\`\`\`bash
+git clone ${repoUrl || `https://github.com/username/${projectName}.git`}
+cd ${projectName}
+\`\`\`
 
 2. **Install dependencies**
-   \`\`\`bash
-   ${stack.packageManager === 'npm' ? 'npm install' : stack.packageManager === 'yarn' ? 'yarn' : 'pnpm install'}
-   \`\`\`
+\`\`\`bash
+npm install
+\`\`\`
 
-3. **Set up environment**
-   \`\`\`bash
-   cp .env.example .env
-   \`\`\`
+3. **Set up environment variables**
+\`\`\`bash
+cp .env.example .env
+\`\`\`
+Then edit \`.env\` and add your API keys.
 
-4. **Run the application**
-   Use the ACTUAL "dev" script from package.json:
-   \`\`\`bash
-   ${stack.packageManager === 'npm' ? 'npm run dev' : stack.packageManager === 'yarn' ? 'yarn dev' : 'pnpm dev'}
-   \`\`\`
+4. **Start development server**
+\`\`\`bash
+npm run dev
+\`\`\`
 
-NOTE: Only mention environment setup if .env.example actually exists in the project.`,
+Open [http://localhost:3000](http://localhost:3000) in your browser.`,
 
-    'tech-stack': `Create tech stack based ONLY on actual dependencies.
-
-## 🛠️ Tech Stack
-
-Read the dependencies from package.json and list them accurately:
+    'tech-stack': `## 🛠️ Tech Stack
 
 | Category | Technology |
 |----------|------------|
-| Framework | ${stack.primary} |
-| Language | ${stack.language} |
+| Framework | Next.js |
+| Language | TypeScript |
 
-Add rows ONLY for dependencies that actually exist:
-- If has "tailwindcss" → Styling: Tailwind CSS
-- If has "prisma" → ORM: Prisma
-- If has "@upstash/redis" → Cache: Redis (Upstash)
-- If has "openai" → AI: OpenAI
-- If has "@google/generative-ai" → AI: Google Gemini
-- If has "zustand" → State: Zustand
+Add ONLY technologies that exist in dependencies:
+- @upstash/redis → | Cache | Upstash Redis |
+- zustand → | State | Zustand |
+- tailwindcss → | Styling | Tailwind CSS |
+- AI libs → | AI | OpenAI, Google Gemini, Anthropic, Groq |
 
-DO NOT add technologies that aren't in the dependencies.`,
+DO NOT add technologies not in package.json.`,
 
-    environment: `Document environment variables ONLY from .env.example if it exists.
+    environment: `## ⚙️ Environment Variables
 
-## ⚙️ Environment Variables
+CRITICAL: Use EXACT variables from .env.example if provided in context.
+If not provided, infer from dependencies:
 
-CRITICAL: 
-1. If .env.example content is provided in context, use THOSE EXACT variables
-2. If no .env.example, list variables based on dependencies:
-   - Has openai → OPENAI_API_KEY
-   - Has @google/generative-ai → GOOGLE_AI_API_KEY  
-   - Has @upstash/redis → UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN
-   - Has groq-sdk → GROQ_API_KEY
-
-Format:
 \`\`\`env
-# Copy from .env.example and fill in your values
-VARIABLE_NAME=your_value_here
+# AI Provider Keys (at least one required)
+OPENAI_API_KEY=your_openai_key
+GOOGLE_AI_API_KEY=your_google_ai_key
+ANTHROPIC_API_KEY=your_anthropic_key
+GROQ_API_KEY=your_groq_key
+
+# Redis (required for caching)
+UPSTASH_REDIS_REST_URL=your_redis_url
+UPSTASH_REDIS_REST_TOKEN=your_redis_token
+
+# Optional
+GITHUB_TOKEN=your_github_token  # For higher API rate limits
 \`\`\`
 
 | Variable | Description | Required |
 |----------|-------------|----------|
+| OPENAI_API_KEY | OpenAI API key | No* |
+| GOOGLE_AI_API_KEY | Google AI API key | No* |
+| GROQ_API_KEY | Groq API key | No* |
+| UPSTASH_REDIS_REST_URL | Redis connection URL | Yes |
+| UPSTASH_REDIS_REST_TOKEN | Redis auth token | Yes |
 
-DO NOT invent variables like "SOCIAL_MEDIA_INTEGRATION" or "BLOG_CMS_INTEGRATION" unless they exist in .env.example.`,
+*At least one AI provider key is required.`,
 
-    'api-docs': `Document API endpoints ONLY if they actually exist.
+    scripts: `## 📜 Available Scripts
 
-## 📚 API Reference
+| Command | Description |
+|---------|-------------|
+| \`npm run dev\` | Start development server |
+| \`npm run build\` | Create production build |
+| \`npm run start\` | Start production server |
+| \`npm run lint\` | Run ESLint |
+| \`npm test\` | Run tests |
+| \`npm run test:watch\` | Run tests in watch mode |
+| \`npm run test:coverage\` | Run tests with coverage |
 
-CRITICAL:
-1. Look at the actual API routes in the project (app/api/ or pages/api/)
-2. ONLY document endpoints that exist
-3. If you see /api/generate, /api/analyze, /api/clear-cache - document those
-4. DO NOT invent endpoints
+Only include scripts that actually exist in package.json.`,
 
-If this is a ${stack.primary} project with app/api/ routes, document:
-- The actual routes from the file structure
-- What they do based on their names
-- Example request/response based on actual functionality`,
-
-    deployment: `Create deployment instructions for ${stack.primary}.
-
-## 🚀 Deployment
+    deployment: `## 🚀 Deployment
 
 ### Production Build
 \`\`\`bash
-${stack.packageManager === 'npm' ? 'npm run build' : stack.packageManager === 'yarn' ? 'yarn build' : 'pnpm build'}
+npm run build
+npm run start
 \`\`\`
 
-${stack.primary === 'nextjs' ? `
-### Vercel (Recommended for Next.js)
+### Deploy to Vercel (Recommended)
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
 
-1. Push code to GitHub
-2. Import project in Vercel  
+1. Push your code to GitHub
+2. Import project in Vercel
 3. Add environment variables
-4. Deploy
-` : ''}
+4. Deploy!
 
-${stack.hasDocker ? `
-### Docker
-\`\`\`bash
-docker build -t ${projectName.toLowerCase()} .
-docker run -p 3000:3000 ${projectName.toLowerCase()}
-\`\`\`
-` : ''}
+### Environment Variables for Production
+Make sure to set all required environment variables in your deployment platform.`,
 
-List only deployment options relevant to the actual project setup.`,
+    contributing: `## 🤝 Contributing
 
-    contributing: `Standard contributing guidelines.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
+Contributions are welcome! Here's how:
 
 1. Fork the repository
-2. Create a feature branch (\`git checkout -b feature/your-feature\`)
-3. Commit your changes (\`git commit -m 'Add your feature'\`)
-4. Push to the branch (\`git push origin feature/your-feature\`)
+2. Create a feature branch: \`git checkout -b feature/amazing-feature\`
+3. Commit changes: \`git commit -m 'Add amazing feature'\`
+4. Push to branch: \`git push origin feature/amazing-feature\`
 5. Open a Pull Request
 
 ### Guidelines
@@ -261,53 +229,102 @@ Contributions are welcome! Please follow these steps:
 - Add tests for new features
 - Update documentation as needed`,
 
-    license: `Add license section.
-
-## 📄 License
+    license: `## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-Made with ❤️ for the developer community`,
+Built with ❤️ using Next.js and AI`,
 
-    testing: `Document testing ONLY if test scripts exist.
+    testing: `## 🧪 Testing
 
-## 🧪 Testing
-
-CRITICAL: Only include this if package.json has test scripts.
-
-If "test" script exists:
+Run tests:
 \`\`\`bash
-${stack.packageManager === 'npm' ? 'npm test' : stack.packageManager === 'yarn' ? 'yarn test' : 'pnpm test'}
+npm test
 \`\`\`
 
-If "test:watch" exists:
+Watch mode:
 \`\`\`bash
-${stack.packageManager === 'npm' ? 'npm run test:watch' : 'yarn test:watch'}
+npm run test:watch
 \`\`\`
 
-If "test:coverage" exists:
+Coverage report:
 \`\`\`bash
-${stack.packageManager === 'npm' ? 'npm run test:coverage' : 'yarn test:coverage'}
-\`\`\`
-
-Only mention testing conventions if you see test files in the structure.`,
-
-    scripts: `Document ACTUAL scripts from package.json.
-
-## 📜 Available Scripts
-
-List ONLY scripts that exist in package.json:
-
-| Script | Command | Description |
-|--------|---------|-------------|
-
-For each script in package.json, explain what it does based on its command.
-Common scripts to look for: dev, build, start, lint, test, format, etc.
-
-DO NOT add scripts that don't exist.`,
+npm run test:coverage
+\`\`\``,
   };
 
   return basePrompt + '\n\n' + (sectionInstructions[section.id] || section.howToWrite);
+}
+
+// ✅ NEW: Infer project purpose from context
+function inferProjectPurpose(context: string, projectName: string): string {
+  const contextLower = context.toLowerCase();
+  const nameLower = projectName.toLowerCase();
+  
+  // Check for README generator indicators
+  const isReadmeGenerator = 
+    contextLower.includes('/api/generate') ||
+    contextLower.includes('/api/analyze') ||
+    contextLower.includes('readme') ||
+    contextLower.includes('generatereadme') ||
+    contextLower.includes('section-prompts') ||
+    contextLower.includes('readme-store') ||
+    contextLower.includes('previeweditor') ||
+    contextLower.includes('sectionSelector') ||
+    nameLower.includes('readme') ||
+    nameLower.includes('docs') ||
+    nameLower.includes('devdocs');
+  
+  // Check for documentation tool indicators
+  const isDocTool =
+    contextLower.includes('react-markdown') &&
+    (contextLower.includes('openai') || contextLower.includes('generative-ai'));
+  
+  // Check for multi-provider AI
+  const hasMultipleAI = 
+    (contextLower.includes('openai') ? 1 : 0) +
+    (contextLower.includes('anthropic') ? 1 : 0) +
+    (contextLower.includes('generative-ai') || contextLower.includes('gemini') ? 1 : 0) +
+    (contextLower.includes('groq') ? 1 : 0) >= 2;
+  
+  if (isReadmeGenerator || (nameLower.includes('doc') && hasMultipleAI)) {
+    return `
+📌 PROJECT PURPOSE: ${projectName} is an AI-powered README/documentation generator.
+
+It analyzes GitHub repositories, detects the tech stack, and uses AI (OpenAI, Gemini, Anthropic, Groq) 
+to generate professional, customized README files.
+
+Key functionality:
+- Analyzes repository structure and dependencies
+- Detects tech stack automatically  
+- Generates README sections using AI
+- Supports multiple AI providers with fallback
+- Caches results for performance
+
+USE THIS DESCRIPTION - don't say "AI-powered tool" generically.
+`;
+  }
+  
+  if (isDocTool) {
+    return `
+📌 PROJECT PURPOSE: ${projectName} is an AI-powered documentation tool.
+
+It uses AI to help create and manage documentation with markdown preview.
+`;
+  }
+  
+  if (hasMultipleAI) {
+    return `
+📌 PROJECT PURPOSE: ${projectName} is an AI-powered tool using multiple AI providers.
+
+Analyze the API routes to determine exactly what it generates/creates.
+`;
+  }
+  
+  return `
+📌 PROJECT PURPOSE: Analyze the actual API routes and components to determine what ${projectName} does.
+Look at /api/ routes and main components to understand the core functionality.
+`;
 }

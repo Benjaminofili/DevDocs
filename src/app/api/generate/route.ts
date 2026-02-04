@@ -7,7 +7,7 @@ import { generateSectionPrompt } from '@/lib/ai/prompts/section-prompts';
 import { DetectedStack } from '@/types';
 import { aiOrchestrator } from '@/lib/ai/orchestrator';
 
-// ✅ Enhanced types with repo data
+// Types
 interface RepoData {
   files: Array<{ name: string; content: string }>;
   structure: string[];
@@ -24,7 +24,7 @@ interface GenerateRequestBody {
   stack: DetectedStack;
   projectName: string;
   repoUrl?: string;
-  repoData?: RepoData; // ✅ Accept repo data
+  repoData?: RepoData;
 }
 
 interface CachedResponse {
@@ -60,8 +60,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ✅ Parse body FIRST, then log
     const body = await request.json() as GenerateRequestBody;
     const { sectionId, stack, projectName, repoUrl, repoData } = body;
+
+    // ✅ Now we can log after variables are defined
+    console.log('📝 Generate request:', {
+      sectionId,
+      projectName,
+      projectNameType: typeof projectName,
+      hasStack: !!stack,
+      hasRepoData: !!repoData,
+    });
+
+    // ✅ Safety check for projectName
+    const safeProjectName = typeof projectName === 'string' && projectName.trim() 
+      ? projectName 
+      : 'Project';
 
     const section = SECTION_BRICKS.find(s => s.id === sectionId);
     if (!section) {
@@ -71,17 +86,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ✅ Build rich context from actual repo data
-    const additionalContext = buildEnhancedContext(repoData, stack, projectName, repoUrl);
+    // Build context from repo data
+    const additionalContext = buildEnhancedContext(repoData, stack, safeProjectName, repoUrl);
 
-    const prompt = generateSectionPrompt(section, stack, projectName, additionalContext, repoUrl);
+    // Generate prompt
+    const prompt = generateSectionPrompt(
+      section, 
+      stack, 
+      safeProjectName, 
+      additionalContext, 
+      repoUrl
+    );
 
-    // Redis Caching - include repoData hash for better cache key
+    // Redis Caching
     const contextHash = repoData 
       ? Buffer.from(JSON.stringify(repoData.structure?.slice(0, 10) || [])).toString('base64').slice(0, 20)
       : '';
     const projectSpecificHash = Buffer.from(
-      `${projectName}:${sectionId}:${stack.primary}:${contextHash}`
+      `${safeProjectName}:${sectionId}:${stack.primary}:${contextHash}`
     ).toString('base64');
     const cacheKey = `generate:${projectSpecificHash}`;
 
@@ -112,7 +134,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate content using AIOrchestrator
+    // Generate content
     try {
       const response = await aiOrchestrator.generate(prompt, additionalContext);
 
@@ -177,8 +199,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// In /api/generate/route.ts - Update buildEnhancedContext
-
+// Build enhanced context from repo data
 function buildEnhancedContext(
   repoData: RepoData | undefined, 
   stack: DetectedStack, 
@@ -187,17 +208,27 @@ function buildEnhancedContext(
 ): string {
   const sections: string[] = [];
 
-  sections.push(`=== PROJECT: ${projectName} ===`);
+  // ✅ Safety check
+  const safeName = typeof projectName === 'string' ? projectName : 'Project';
+
+  sections.push(`=== PROJECT: ${safeName} ===`);
+  sections.push(`Stack: ${stack.primary} (${stack.language})`);
+  sections.push(`Package Manager: ${stack.packageManager}`);
   
+  if (repoUrl) {
+    sections.push(`Repository: ${repoUrl}`);
+  }
+
   if (!repoData) {
+    sections.push('\n⚠️ No repository data available.');
     return sections.join('\n');
   }
 
-  // ✅ Analyze file structure for purpose detection
-  if (repoData.structure) {
+  // Analyze file structure
+  if (repoData.structure && repoData.structure.length > 0) {
     const structure = repoData.structure;
     
-    // Key indicators
+    // Detect project type
     const hasGenerateApi = structure.some(f => f.includes('api/generate'));
     const hasAnalyzeApi = structure.some(f => f.includes('api/analyze'));
     const hasReadmeComponents = structure.some(f => 
@@ -207,56 +238,72 @@ function buildEnhancedContext(
     );
     
     if (hasGenerateApi || hasAnalyzeApi || hasReadmeComponents) {
-      sections.push('\n🎯 PROJECT TYPE DETECTED: README/Documentation Generator');
-      sections.push('This project generates documentation using AI.');
+      sections.push('\n🎯 PROJECT TYPE: README/Documentation Generator');
     }
     
     // API routes
-    const apiRoutes = structure.filter(f => f.includes('/api/'));
+    const apiRoutes = structure.filter(f => f.includes('/api/') || f.includes('api/'));
     if (apiRoutes.length > 0) {
-      sections.push('\n📡 API ROUTES (shows what the project does):');
-      apiRoutes.forEach(r => sections.push(`  - ${r}`));
+      sections.push('\n📡 API ROUTES:');
+      apiRoutes.slice(0, 10).forEach(r => sections.push(`  - ${r}`));
     }
     
-    // Components
-    const components = structure.filter(f => 
-      f.includes('/components/') || f.includes('wizard') || f.includes('preview')
-    );
-    if (components.length > 0) {
-      sections.push('\n🧩 KEY COMPONENTS:');
-      components.slice(0, 10).forEach(c => sections.push(`  - ${c}`));
-    }
+    // File structure summary
+    sections.push(`\n📁 FILES: ${structure.length} total`);
   }
 
-  // Package.json
+  // Package.json info
   if (repoData.packageJson) {
     const pkg = repoData.packageJson;
     
+    sections.push('\n=== PACKAGE.JSON ===');
+    
     if (pkg.description) {
-      sections.push(`\n📌 OFFICIAL DESCRIPTION: "${pkg.description}"`);
+      sections.push(`📌 DESCRIPTION: "${pkg.description}"`);
+    }
+    
+    if (pkg.name) {
+      sections.push(`Name: ${pkg.name}`);
+    }
+    
+    if (pkg.version) {
+      sections.push(`Version: ${pkg.version}`);
     }
     
     // Scripts
-    if (pkg.scripts) {
+    if (pkg.scripts && typeof pkg.scripts === 'object') {
+      const scripts = pkg.scripts as Record<string, string>;
       sections.push('\n📜 SCRIPTS:');
-      Object.entries(pkg.scripts as Record<string, string>).forEach(([name, cmd]) => {
+      Object.entries(scripts).forEach(([name, cmd]) => {
         sections.push(`  ${name}: ${cmd}`);
       });
     }
     
     // Dependencies
-    if (pkg.dependencies) {
+    if (pkg.dependencies && typeof pkg.dependencies === 'object') {
       const deps = Object.keys(pkg.dependencies as Record<string, string>);
-      sections.push('\n📦 DEPENDENCIES:');
+      sections.push(`\n📦 DEPENDENCIES (${deps.length}):`);
       sections.push(deps.join(', '));
+    }
+    
+    if (pkg.devDependencies && typeof pkg.devDependencies === 'object') {
+      const devDeps = Object.keys(pkg.devDependencies as Record<string, string>);
+      sections.push(`\n🔧 DEV DEPENDENCIES (${devDeps.length}):`);
+      sections.push(devDeps.join(', '));
     }
   }
 
   // Environment variables
   if (repoData.envExample) {
-    sections.push('\n🔐 ENVIRONMENT VARIABLES (.env.example):');
+    sections.push('\n=== .ENV.EXAMPLE ===');
     sections.push(repoData.envExample);
   }
+
+  // Features
+  sections.push('\n=== DETECTED FEATURES ===');
+  if (repoData.hasDocker) sections.push('✓ Docker');
+  if (repoData.hasCI) sections.push('✓ CI/CD');
+  if (repoData.hasTests) sections.push('✓ Tests');
 
   return sections.join('\n');
 }

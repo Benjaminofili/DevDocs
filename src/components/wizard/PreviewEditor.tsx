@@ -212,28 +212,33 @@ export function PreviewEditor() {
               </p>
             </div>
             
-            {/* Action Buttons - Stack on mobile */}
+            {/* Action Buttons - Updated with better colors */}
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={handleClearCache}
                 disabled={isClearingCache}
                 className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 
-                         bg-red-100 dark:bg-red-900/20 hover:bg-red-200 dark:hover:bg-red-900/30 
-                         text-red-700 dark:text-red-300 rounded-lg transition-colors 
-                         disabled:opacity-50 text-sm"
+                         bg-red-500 hover:bg-red-600 active:bg-red-700
+                         text-white rounded-lg transition-all duration-200 
+                         disabled:opacity-50 disabled:cursor-not-allowed text-sm
+                         shadow-sm hover:shadow-md font-medium"
               >
                 <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="hidden xs:inline">{isClearingCache ? 'Clearing...' : 'Clear'}</span>
+                <span className="hidden xs:inline">
+                  {isClearingCache ? 'Clearing...' : 'Clear Cache'}
+                </span>
               </button>
+              
               <button
                 onClick={handleCopy}
                 className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 
-                         bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 
-                         rounded-lg transition-colors text-sm"
+                         bg-blue-500 hover:bg-blue-600 active:bg-blue-700
+                         text-white rounded-lg transition-all duration-200 text-sm
+                         shadow-sm hover:shadow-md font-medium"
               >
                 {copied ? (
                   <>
-                    <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
+                    <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     <span className="hidden xs:inline">Copied!</span>
                   </>
                 ) : (
@@ -243,10 +248,13 @@ export function PreviewEditor() {
                   </>
                 )}
               </button>
+              
               <button
                 onClick={handleDownload}
-                className="btn-professional inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 
-                         text-white font-medium rounded-lg text-sm"
+                className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 
+                         bg-green-500 hover:bg-green-600 active:bg-green-700
+                         text-white font-medium rounded-lg text-sm
+                         shadow-sm hover:shadow-md transition-all duration-200"
               >
                 <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span className="hidden xs:inline">Download</span>
@@ -513,8 +521,10 @@ export function PreviewEditor() {
                 </label>
                 <button
                   onClick={handleSaveEdit}
-                  className="btn-professional inline-flex items-center justify-center gap-2 
-                           px-4 py-2 text-white font-medium rounded-lg text-sm"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 
+                           bg-green-500 hover:bg-green-600 active:bg-green-700
+                           text-white font-medium rounded-lg text-sm
+                           shadow-sm hover:shadow-md transition-all duration-200"
                 >
                   <Check className="w-4 h-4" />
                   Save Changes
@@ -547,16 +557,17 @@ export function PreviewEditor() {
               <button
                 onClick={handleCopy}
                 className="absolute top-2 sm:top-4 right-2 sm:right-4 px-2 sm:px-3 py-1 sm:py-1.5 
-                         bg-slate-700 hover:bg-slate-600 text-slate-200 rounded 
-                         text-xs sm:text-sm transition-colors"
+                         bg-blue-500 hover:bg-blue-600 active:bg-blue-700
+                         text-white rounded text-xs sm:text-sm transition-all duration-200
+                         shadow-sm hover:shadow-md font-medium"
               >
-                {copied ? 'Copied!' : 'Copy'}
+                {copied ? '✓ Copied!' : 'Copy'}
               </button>
             </div>
           )}
         </div>
 
-        {/* Footer Actions - Responsive Stack */}
+        {/* Footer Actions - Updated Colors */}
         <div className="p-4 sm:p-6 border-t border-slate-200 dark:border-slate-700 
                         bg-slate-50 dark:bg-slate-900/50 rounded-b-xl sm:rounded-b-2xl">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center 
@@ -564,8 +575,9 @@ export function PreviewEditor() {
             <button
               onClick={() => setCurrentStep('select')}
               className="inline-flex items-center justify-center sm:justify-start gap-2 
-                       px-4 py-2 text-slate-600 dark:text-slate-400 
-                       hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
+                       px-4 py-2 bg-gray-500 hover:bg-gray-600 active:bg-gray-700
+                       text-white rounded-lg transition-all duration-200 text-sm
+                       shadow-sm hover:shadow-md font-medium"
             >
               <ChevronLeft className="w-4 h-4" />
               Back to Sections
@@ -575,8 +587,10 @@ export function PreviewEditor() {
               {activeTab === 'edit' && (
                 <button
                   onClick={handleSaveEdit}
-                  className="btn-professional inline-flex items-center justify-center gap-2 
-                           px-4 py-2 text-white font-medium rounded-lg text-sm"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 
+                           bg-green-500 hover:bg-green-600 active:bg-green-700
+                           text-white font-medium rounded-lg text-sm
+                           shadow-sm hover:shadow-md transition-all duration-200"
                 >
                   <Check className="w-4 h-4" />
                   Save Changes
@@ -585,8 +599,9 @@ export function PreviewEditor() {
               <button
                 onClick={handleRegenerate}
                 className="inline-flex items-center justify-center gap-2 px-4 py-2 
-                         bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 
-                         dark:hover:bg-slate-600 rounded-lg transition-colors text-sm"
+                         bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700
+                         text-white rounded-lg transition-all duration-200 text-sm
+                         shadow-sm hover:shadow-md font-medium"
               >
                 <RefreshCw className="w-4 h-4" />
                 Regenerate

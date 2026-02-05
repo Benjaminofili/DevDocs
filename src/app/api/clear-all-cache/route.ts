@@ -1,9 +1,9 @@
 // src/app/api/clear-all-cache/route.ts
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { redis } from '@/lib/rate-limit';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     let cursor = '0';
     let deletedCount = 0;
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   // Same logic for GET requests
   try {
     let cursor = '0';

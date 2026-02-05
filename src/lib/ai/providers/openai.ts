@@ -1,18 +1,20 @@
-// src/lib/ai/providers/openai.ts
-
 import OpenAI from 'openai';
 import { AIResponse } from '@/types';
 import { AIProviderInterface } from './base';
+import { getEnv } from '@/lib/env';
+import { logger } from '@/lib/logger';
+import { AI_CONFIG } from '@/config/constants';
 
 export class OpenAIProvider implements AIProviderInterface {
   private client: OpenAI | null = null;
-  private readonly MAX_RETRIES = 2;
-  private readonly RETRY_DELAY = 2000;
+  private readonly MAX_RETRIES = AI_CONFIG.MAX_RETRIES;
+  private readonly RETRY_DELAY = AI_CONFIG.RETRY_DELAY_MS;
 
   constructor() {
-    if (process.env.OPENAI_API_KEY) {
+    const env = getEnv();
+    if (env.OPENAI_API_KEY) {
       this.client = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
+        apiKey: env.OPENAI_API_KEY,
       });
     }
   }
@@ -25,13 +27,14 @@ export class OpenAIProvider implements AIProviderInterface {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  private getErrorType(error: any): 'rate_limit' | 'overloaded' | 'server_error' | 'context_length' | 'unknown' {
-    const status = error?.status;
-    const code = error?.code;
+  private getErrorType(error: unknown): 'rate_limit' | 'overloaded' | 'server_error' | 'context_length' | 'unknown' {
+    const openAIError = error as { status?: number; code?: string };
+    const status = openAIError?.status;
+    const code = openAIError?.code;
 
     if (status === 429 || code === 'rate_limit_exceeded') return 'rate_limit';
     if (status === 503 || status === 502) return 'overloaded';
-    if (status >= 500) return 'server_error';
+    if (status && status >= 500) return 'server_error';
     if (code === 'context_length_exceeded') return 'context_length';
 
     return 'unknown';
@@ -45,13 +48,13 @@ export class OpenAIProvider implements AIProviderInterface {
     if (!this.client) throw new Error('OpenAI not configured');
 
     try {
-      console.log(`🤖 OpenAI ${modelName} (attempt ${attempt}/${this.MAX_RETRIES})...`);
+      logger.ai('openai', `Generating with ${modelName} (attempt ${attempt}/${this.MAX_RETRIES})...`);
 
       const response = await this.client.chat.completions.create({
         model: modelName,
         messages,
-        temperature: 0.7,
-        max_tokens: 2000,
+        temperature: AI_CONFIG.DEFAULT_TEMPERATURE,
+        max_tokens: AI_CONFIG.DEFAULT_MAX_TOKENS,
       });
 
       return {
@@ -60,9 +63,9 @@ export class OpenAIProvider implements AIProviderInterface {
         tokensUsed: response.usage?.total_tokens,
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errorType = this.getErrorType(error);
-      console.error(`❌ OpenAI ${modelName} (${errorType})`);
+      logger.error(`OpenAI ${modelName} error (${errorType})`, error);
 
       // Don't retry on context length errors
       if (errorType === 'context_length') return null;
@@ -73,7 +76,7 @@ export class OpenAIProvider implements AIProviderInterface {
 
       if (shouldRetry) {
         const waitTime = this.RETRY_DELAY * attempt;
-        console.log(`⏳ Retrying after ${waitTime / 1000}s...`);
+        logger.warn(`Retrying OpenAI request after ${waitTime / 1000}s...`);
         await this.wait(waitTime);
         return this.generateWithModel(modelName, messages, attempt + 1);
       }
@@ -118,7 +121,7 @@ export class OpenAIProvider implements AIProviderInterface {
     }
 
     // Fallback if all models fail
-    console.warn('⚠️ All OpenAI models failed');
+    logger.warn('All OpenAI models failed');
     throw new Error('All OpenAI models failed');
   }
 }

@@ -35,9 +35,11 @@ export function WhyThisSection({ section, aiExplanation }: WhyThisSectionProps) 
             <div className="flex items-center justify-between p-4 border-b 
                             border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                📚 Why "{section.name}"?
+                📚 Why &quot;{section.name}&quot;?
               </h3>
               <button
+                type="button"
+                aria-label="Close dialog"
                 onClick={() => setIsOpen(false)}
                 className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               >

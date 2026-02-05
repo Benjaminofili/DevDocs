@@ -15,6 +15,7 @@ describe('getSectionsForStack', () => {
     hasEnvFile: false,
     frameworks: [],
     dependencies: {},
+    domainHints: [],
   };
 
   it('should return all non-stack-specific sections', () => {

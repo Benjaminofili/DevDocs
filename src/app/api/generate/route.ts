@@ -106,7 +106,13 @@ export async function POST(request: NextRequest) {
       throw validationError;
     }
 
-    const { sectionId, stack, projectName, repoUrl, repoData } = validatedBody;
+    const { sectionId, projectName, repoUrl, repoData } = validatedBody;
+
+    // ✅ FIX: Normalize stack to ensure it matches DetectedStack type
+    const stack: DetectedStack = {
+      ...validatedBody.stack,
+      domainHints: validatedBody.stack.domainHints || [], // Ensure it's always an array
+    };
 
     logger.debug('Generate request', { 
       sectionId, 
@@ -294,7 +300,7 @@ export async function POST(request: NextRequest) {
  */
 function buildEnhancedContext(
   repoData: RepoData | undefined, 
-  stack: DetectedStack, 
+  stack: DetectedStack, // ✅ Now only accepts DetectedStack (not DetectedStackInput)
   projectName: string,
   repoUrl?: string
 ): string {

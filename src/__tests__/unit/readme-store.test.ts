@@ -41,6 +41,7 @@ describe('useReadmeStore', () => {
         hasEnvFile: true,
         frameworks: ['Next.js', 'React', 'Tailwind CSS'],
         dependencies: {},
+        domainHints: [],
       };
 
       useReadmeStore.getState().setStack(mockStack);

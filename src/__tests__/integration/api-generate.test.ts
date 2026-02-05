@@ -14,8 +14,9 @@ describe('Generate Integration', () => {
     hasCI: true,
     hasTesting: true,
     hasEnvFile: true,
-    frameworks: ['Next.js', 'Tailwind CSS'],
+    frameworks: ['Next.js', 'React'],
     dependencies: {},
+    domainHints: [], 
   };
 
   describe('generateSectionPrompt', () => {

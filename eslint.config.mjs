@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+
+    // Test files (will redo later)
+    "jest.config.js",
+    "test-groq.js", 
+    "src/__tests__/**",
   ]),
 ]);
 

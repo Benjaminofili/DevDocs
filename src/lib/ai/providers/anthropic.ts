@@ -1,16 +1,23 @@
-// src/lib/ai/providers/anthropic.ts
-
 import Anthropic from '@anthropic-ai/sdk';
 import { AIResponse } from '@/types';
 import { AIProviderInterface } from './base';
+import { getEnv } from '@/lib/env';
+import { logger } from '@/lib/logger';
+import { AI_CONFIG } from '@/config/constants';
+
+interface TextBlock {
+  type: 'text';
+  text: string;
+}
 
 export class AnthropicProvider implements AIProviderInterface {
   private client: Anthropic | null = null;
 
   constructor() {
-    if (process.env.ANTHROPIC_API_KEY) {
+    const env = getEnv();
+    if (env.ANTHROPIC_API_KEY) {
       this.client = new Anthropic({
-        apiKey: process.env.ANTHROPIC_API_KEY,
+        apiKey: env.ANTHROPIC_API_KEY,
       });
     }
   }
@@ -36,8 +43,8 @@ export class AnthropicProvider implements AIProviderInterface {
 
       const message = await this.client.messages.create({
         model: 'claude-3-haiku-20240307', // Most cost-effective Claude model
-        max_tokens: 2000,
-        temperature: 0.7,
+        max_tokens: AI_CONFIG.DEFAULT_MAX_TOKENS,
+        temperature: AI_CONFIG.DEFAULT_TEMPERATURE,
         system: systemPrompt,
         messages: [
           {
@@ -49,8 +56,8 @@ export class AnthropicProvider implements AIProviderInterface {
 
       // Extract text from Claude's response
       const content = message.content
-        .filter((block) => block.type === 'text')
-        .map((block) => (block as any).text)
+        .filter((block): block is TextBlock => block.type === 'text')
+        .map((block) => block.text)
         .join('\n');
 
       return {
@@ -59,7 +66,7 @@ export class AnthropicProvider implements AIProviderInterface {
         tokensUsed: message.usage?.input_tokens + message.usage?.output_tokens,
       };
     } catch (error) {
-      console.error('Anthropic generation failed:', error);
+      logger.error('Anthropic generation failed:', error);
       throw new Error('Failed to generate content with Anthropic');
     }
   }

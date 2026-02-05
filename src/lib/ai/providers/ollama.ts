@@ -2,6 +2,8 @@
 
 import { AIResponse } from '@/types';
 import { AIProviderInterface } from './base';
+import { logger } from '@/lib/logger';
+import { getEnv } from '@/lib/env';
 
 interface OllamaResponse {
   model: string;
@@ -15,8 +17,9 @@ export class OllamaProvider implements AIProviderInterface {
   private model: string;
 
   constructor() {
-    this.baseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-    this.model = process.env.OLLAMA_MODEL || 'llama2';
+    const env = getEnv();
+    this.baseUrl = env.OLLAMA_BASE_URL;
+    this.model = env.OLLAMA_MODEL;
   }
 
   isConfigured(): boolean {
@@ -31,11 +34,11 @@ export class OllamaProvider implements AIProviderInterface {
       Use markdown formatting appropriately.`;
 
       let fullPrompt = systemPrompt + '\n\n';
-      
+
       if (context) {
         fullPrompt += `Project Context:\n${context}\n\n`;
       }
-      
+
       fullPrompt += prompt;
 
       const response = await fetch(`${this.baseUrl}/api/generate`, {
@@ -61,7 +64,7 @@ export class OllamaProvider implements AIProviderInterface {
         provider: 'ollama',
       };
     } catch (error) {
-      console.error('Ollama generation failed:', error);
+      logger.error('Ollama generation failed:', error);
       throw new Error('Failed to generate content with Ollama. Make sure Ollama is running locally.');
     }
   }

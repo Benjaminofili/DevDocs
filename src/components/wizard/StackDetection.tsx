@@ -3,7 +3,7 @@
 'use client';
 
 import React from 'react';
-import { CheckCircle, Package, GitBranch, FileCode, ChevronRight, ChevronLeft, Database, Terminal } from 'lucide-react';
+import { CheckCircle, Package, FileCode, ChevronRight, ChevronLeft, Database, Terminal } from 'lucide-react';
 import { useReadmeStore } from '@/store/readme-store';
 
 export function StackDetection() {
@@ -32,7 +32,6 @@ export function StackDetection() {
   const packageInfo = repoData?.packageJson as Record<string, unknown> | undefined;
   const scripts = packageInfo?.scripts as Record<string, string> | undefined;
   const dependencies = packageInfo?.dependencies as Record<string, string> | undefined;
-  const devDependencies = packageInfo?.devDependencies as Record<string, string> | undefined;
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -45,7 +44,7 @@ export function StackDetection() {
             We detected your stack!
           </h2>
           <p className="mt-2 text-gray-600 dark:text-gray-300">
-            Here's what we found in your project. We'll use this to customize your README.
+            Here&apos;s what we found in your project. We&apos;ll use this to customize your README.
           </p>
         </div>
 
@@ -288,4 +287,3 @@ export function StackDetection() {
     </div>
   );
 }
-

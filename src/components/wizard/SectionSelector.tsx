@@ -8,6 +8,13 @@ import { WhyThisSection } from '../education/WhyThisSection';
 import { STACK_EDUCATION } from '@/data/educational-content';
 import { useReadmeStore } from '@/store/readme-store';
 import { GeneratedSection } from '@/types';
+import { logger } from '@/lib/logger';
+
+interface PackageJson {
+  name?: string;
+  version?: string;
+  [key: string]: unknown;
+}
 
 export function SectionSelector() {
   const { 
@@ -70,7 +77,7 @@ export function SectionSelector() {
           generated.push(section);
           addGeneratedSection(section);
         } else {
-          console.error(`Failed to generate ${sectionId}:`, data.error);
+          logger.error(`Failed to generate ${sectionId}:`, data.error);
           const errorSection: GeneratedSection = {
             id: sectionId,
             content: `## ${sectionId.charAt(0).toUpperCase() + sectionId.slice(1)}\n\n*Content generation failed. Please try again.*`,
@@ -80,7 +87,7 @@ export function SectionSelector() {
           addGeneratedSection(errorSection);
         }
       } catch (error) {
-        console.error(`Failed to generate ${sectionId}:`, error);
+        logger.error(`Failed to generate ${sectionId}:`, error);
         const errorSection: GeneratedSection = {
           id: sectionId,
           content: `## ${sectionId.charAt(0).toUpperCase() + sectionId.slice(1)}\n\n*Error generating content. Please try again.*`,
@@ -94,6 +101,9 @@ export function SectionSelector() {
     setCurrentStep('preview');
     setLoading(false);
   };
+
+  // Type-safe access to packageJson
+  const packageJson = repoData?.packageJson as PackageJson | undefined;
 
   return (
     <div className="space-y-6">
@@ -131,8 +141,8 @@ export function SectionSelector() {
               </h4>
               <div className="text-sm text-green-700 dark:text-green-300 space-y-1">
                 <p>📁 {repoData.structure?.length || 0} files detected</p>
-                {repoData.packageJson && (
-                  <p>📦 Package: {(repoData.packageJson as any).name || projectName} v{(repoData.packageJson as any).version || '1.0.0'}</p>
+                {packageJson && (
+                  <p>📦 Package: {packageJson.name || projectName} v{packageJson.version || '1.0.0'}</p>
                 )}
                 {repoData.hasDocker && <p>🐳 Docker configuration found</p>}
                 {repoData.hasTests && <p>🧪 Test suite detected</p>}
@@ -151,7 +161,7 @@ export function SectionSelector() {
             Choose Your Sections
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            We've pre-selected recommended sections for your {stack.primary} project. 
+            We&apos;ve pre-selected recommended sections for your {stack.primary} project. 
             Toggle sections on/off based on your needs.
           </p>
         </div>

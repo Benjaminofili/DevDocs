@@ -11,6 +11,21 @@
   }
 }
 
+
+@keyframes subtle-float-delayed {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-subtle-float-delayed {
+  animation: subtle-float-delayed 6s ease-in-out infinite;
+  animation-delay: 2s;
+}
+
 @keyframes professional-glow {
   0%, 100% {
     box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.1);

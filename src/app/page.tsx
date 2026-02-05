@@ -2,13 +2,11 @@
 import Link from 'next/link';
 import { 
   Code2, 
-  Sparkles, 
   GitBranch, 
   BookOpen, 
   ArrowRight,
   CheckCircle,
   Github,
-  Zap
 } from 'lucide-react';
 
 export default function Home() {
@@ -54,6 +52,7 @@ export default function Home() {
               href="https://github.com/yourusername/devdocs"
               target="_blank"
               rel="noopener noreferrer"
+              aria-label="View DevDocs on GitHub"
               className="inline-flex items-center justify-center gap-3 px-8 py-4 
                          bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium 
                          rounded-xl shadow-md border border-slate-200 dark:border-slate-700 
@@ -91,7 +90,7 @@ export default function Home() {
                         opacity-30 animate-subtle-float"></div>
         <div className="absolute top-20 right-10 w-64 h-64 bg-gradient-to-br from-purple-100 to-transparent 
                         rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl 
-                        opacity-30 animate-subtle-float" style={{animationDelay: '2s'}}></div>
+                        opacity-30 animate-subtle-float-delayed"></div>
       </div>
 
       {/* Features Section */}
@@ -287,8 +286,11 @@ export default function Home() {
               </p>
             </div>
             <div className="flex items-center gap-6">
-              <a href="https://github.com/yourusername/devdocs" 
-                 className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
+              <a 
+                href="https://github.com/yourusername/devdocs" 
+                aria-label="View project on GitHub"
+                className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+              >
                 <Github className="w-5 h-5" />
               </a>
               <span className="text-sm text-slate-500 dark:text-slate-500">

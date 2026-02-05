@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { Github, Upload, ArrowRight, Loader2 } from 'lucide-react';
 import { useReadmeStore } from '@/store/readme-store';
+import { logger } from '@/lib/logger';
 
 export function RepoInput() {
   const { 
@@ -71,7 +72,7 @@ export function RepoInput() {
         // ✅ Store the repo data for accurate generation
         if (data.data.repoData) {
           setRepoData(data.data.repoData);
-          console.log('📦 Repo data stored:', {
+          logger.info('Repo data stored:', {
             files: data.data.repoData.structure?.length || 0,
             hasPackageJson: !!data.data.repoData.packageJson,
             hasEnvExample: !!data.data.repoData.envExample,
@@ -84,7 +85,7 @@ export function RepoInput() {
         setError(data.error || 'Failed to analyze repository');
       }
     } catch (err) {
-      console.error('Failed to analyze repo:', err);
+      logger.error('Failed to analyze repo:', err);
       setError('An error occurred while analyzing the repository');
     } finally {
       setLoading(false);

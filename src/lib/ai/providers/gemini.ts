@@ -3,22 +3,26 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AIResponse } from '@/types';
 import { AIProviderInterface } from './base';
+import { getEnv } from '@/lib/env';
+import { logger } from '@/lib/logger';
+import { AI_CONFIG, GEMINI_MODELS } from '@/config/constants';
 
 type ErrorType = 'rate_limit' | 'overloaded' | 'not_found' | 'network' | 'unknown';
 
 interface GeminiError {
-  message?: string;
-  status?: number;
+    message?: string;
+    status?: number;
 }
 
 export class GeminiProvider implements AIProviderInterface {
     private client: GoogleGenerativeAI | null = null;
-    private readonly MAX_RETRIES = 2;
-    private readonly RETRY_DELAY = 2000;
+    private readonly MAX_RETRIES = AI_CONFIG.MAX_RETRIES;
+    private readonly RETRY_DELAY = AI_CONFIG.RETRY_DELAY_MS;
 
     constructor() {
-        if (process.env.GOOGLE_AI_API_KEY) {
-            this.client = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
+        const env = getEnv();
+        if (env.GOOGLE_AI_API_KEY) {
+            this.client = new GoogleGenerativeAI(env.GOOGLE_AI_API_KEY);
         }
     }
 
@@ -61,7 +65,7 @@ export class GeminiProvider implements AIProviderInterface {
         }
 
         try {
-            console.log(`🤖 ${modelName} (attempt ${attempt}/${this.MAX_RETRIES})...`);
+            logger.ai('gemini', `${modelName} (attempt ${attempt}/${this.MAX_RETRIES})...`);
 
             const model = this.client.getGenerativeModel({ model: modelName });
 
@@ -84,7 +88,7 @@ Guidelines:
             const text = result.response.text();
 
             if (text) {
-                console.log(`✅ ${modelName} succeeded`);
+                logger.ai('gemini', `✅ ${modelName} succeeded`);
                 return { content: text, provider: 'gemini' };
             }
 
@@ -93,14 +97,14 @@ Guidelines:
         } catch (error: unknown) {
             const errorType = this.getErrorType(error);
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            console.error(`❌ ${modelName} (${errorType}): ${errorMessage}`);
+            logger.error(`Gemini ${modelName} (${errorType}): ${errorMessage}`, error);
 
             const shouldRetry = (errorType === 'overloaded' || errorType === 'network')
                 && attempt < this.MAX_RETRIES;
 
             if (shouldRetry) {
                 const waitTime = this.RETRY_DELAY * attempt;
-                console.log(`⏳ Retrying after ${waitTime / 1000}s...`);
+                logger.warn(`Retrying after ${waitTime / 1000}s...`);
                 await this.wait(waitTime);
                 return this.generateWithModel(modelName, prompt, context, attempt + 1);
             }
@@ -118,10 +122,7 @@ Guidelines:
             throw new Error('Gemini not configured - add GOOGLE_AI_API_KEY to .env.local');
         }
 
-        const modelsToTry = [
-            'gemini-2.5-flash',
-            'gemini-2.5-flash-lite',
-        ];
+        const modelsToTry = [...GEMINI_MODELS];
 
         for (const modelName of modelsToTry) {
             const result = await this.generateWithModel(modelName, prompt, context);

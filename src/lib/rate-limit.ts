@@ -1,18 +1,19 @@
-// src/lib/rate-limit.ts
-
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
+import { RATE_LIMIT } from '@/config/constants';
 
 // Create Redis client
 export const redis = Redis.fromEnv();
 
 // Create rate limiter
-// 10 requests per 10 minutes per IP
 export const rateLimiter = new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(50, '10 m'),
+    limiter: Ratelimit.slidingWindow(
+        RATE_LIMIT.REQUESTS_PER_WINDOW,
+        RATE_LIMIT.WINDOW_SIZE as `${number} ${'ms' | 's' | 'm' | 'h' | 'd'}`
+    ),
     analytics: true,
-    prefix: 'devdocs:ratelimit',
+    prefix: RATE_LIMIT.PREFIX,
 });
 
 // Helper to check rate limit

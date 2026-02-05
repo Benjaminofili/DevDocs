@@ -24,7 +24,7 @@ export const DetectedStackSchema = z.object({
   hasTesting: z.boolean(),
   hasEnvFile: z.boolean(),
   frameworks: z.array(z.string()),
-  dependencies: z.record(z.string()),
+  dependencies: z.record(z.string(), z.string()),
   domainHints: z.array(z.string()).optional(),
 });
 
@@ -35,7 +35,7 @@ export const RepoDataSchema = z.object({
     content: z.string(),
   })),
   structure: z.array(z.string()),
-  packageJson: z.record(z.unknown()).optional(),
+  packageJson: z.record(z.string(), z.unknown()).optional(),
   existingReadme: z.string().optional(),
   envExample: z.string().optional(),
   hasDocker: z.boolean().optional(),

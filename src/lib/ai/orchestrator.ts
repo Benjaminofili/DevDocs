@@ -7,6 +7,7 @@ import { GeminiProvider } from './providers/gemini';
 import { AnthropicProvider } from './providers/anthropic';
 import { OllamaProvider } from './providers/ollama';
 import { GroqProvider } from './providers/groq';
+import { logger } from '@/lib/logger';
 
 interface ProviderConfig {
   provider: AIProvider;
@@ -31,7 +32,7 @@ export class AIOrchestrator {
       priority: number;
     }> = [
         { provider: 'groq', instance: new GroqProvider(), priority: 1 }, // Top priority due to speed
-        { provider: 'gemini', instance: new GeminiProvider(), priority: 2  },
+        { provider: 'gemini', instance: new GeminiProvider(), priority: 2 },
         { provider: 'openai', instance: new OpenAIProvider(), priority: 3 },
         { provider: 'anthropic', instance: new AnthropicProvider(), priority: 4 },
         { provider: 'ollama', instance: new OllamaProvider(), priority: 5 },
@@ -49,12 +50,12 @@ export class AIOrchestrator {
     }
 
     // Log available providers
-    console.log('Available AI Providers:',
-      this.providers
-        .filter(p => p.isAvailable)
-        .map(p => p.provider)
-        .join(', ') || 'None configured'
-    );
+    const availableProviders = this.providers
+      .filter(p => p.isAvailable)
+      .map(p => p.provider)
+      .join(', ');
+
+    logger.info('Available AI Providers:', { providers: availableProviders || 'None configured' });
   }
 
   async generate(
@@ -71,12 +72,12 @@ export class AIOrchestrator {
 
     for (const providerConfig of providersToTry) {
       try {
-        console.log(`Attempting generation with ${providerConfig.provider}...`);
+        logger.ai(providerConfig.provider, 'Attempting generation...');
         const response = await providerConfig.instance.generate(prompt, context);
-        console.log(`Successfully generated with ${providerConfig.provider}`);
+        logger.ai(providerConfig.provider, 'Successfully generated content');
         return response;
       } catch (error) {
-        console.error(`${providerConfig.provider} failed:`, error);
+        logger.warn(`${providerConfig.provider} failed, trying next...`, { error });
         // Continue to next provider (Circuit Breaker pattern)
         continue;
       }

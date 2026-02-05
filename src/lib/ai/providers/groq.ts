@@ -3,19 +3,19 @@
 import Groq from 'groq-sdk';
 import { AIResponse } from '@/types';
 import { AIProviderInterface } from './base';
+import { getEnv } from '@/lib/env';
+import { logger } from '@/lib/logger';
+import { GROQ_MODELS, AI_CONFIG } from '@/config/constants';
 
 export class GroqProvider implements AIProviderInterface {
     private client: Groq | null = null;
-    private readonly models = [
-        'llama-3.3-70b-versatile',
-        'llama-3.1-8b-instant',
-        'openai/gpt-oss-120b',
-    ];
+    private readonly models = [...GROQ_MODELS];
 
     constructor() {
-        if (process.env.GROQ_API_KEY) {
+        const env = getEnv();
+        if (env.GROQ_API_KEY) {
             this.client = new Groq({
-                apiKey: process.env.GROQ_API_KEY,
+                apiKey: env.GROQ_API_KEY,
             });
         }
     }
@@ -45,13 +45,13 @@ Use markdown formatting appropriately.`;
 
         for (const model of this.models) {
             try {
-                console.log(`⚡ Groq attempting with ${model}...`);
+                logger.ai('groq', `Attempting with ${model}...`);
 
                 const completion = await this.client.chat.completions.create({
                     messages,
                     model,
-                    temperature: 0.5,
-                    max_tokens: 2048,
+                    temperature: AI_CONFIG.DEFAULT_TEMPERATURE,
+                    max_tokens: AI_CONFIG.DEFAULT_MAX_TOKENS,
                     top_p: 1,
                     stop: null,
                     stream: false,
@@ -68,7 +68,7 @@ Use markdown formatting appropriately.`;
                 }
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                console.warn(`Groq ${model} failed:`, errorMessage);
+                logger.warn(`Groq ${model} failed:`, { error: errorMessage });
                 // Continue to next model
             }
         }

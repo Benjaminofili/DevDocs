@@ -9,6 +9,7 @@ import { GeneratedSection } from '@/types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
+import { logger } from '@/lib/logger';
 
 export function PreviewEditor() {
   const { 
@@ -93,10 +94,10 @@ export function PreviewEditor() {
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Cache cleared:', data.message);
+        logger.info('Cache cleared:', data.message);
       }
     } catch (error) {
-      console.error('Failed to clear cache:', error);
+      logger.error('Failed to clear cache:', error);
     } finally {
       setIsClearingCache(false);
     }
@@ -139,7 +140,7 @@ export function PreviewEditor() {
           };
           addGeneratedSection(section);
         } else {
-          console.error(`Failed to generate ${sectionId}:`, data.error);
+          logger.error(`Failed to generate ${sectionId}:`, data.error);
           const errorSection: GeneratedSection = {
             id: sectionId,
             content: `## ${sectionId.charAt(0).toUpperCase() + sectionId.slice(1)}\n\n*Content generation failed. Please try again.*`,
@@ -148,7 +149,7 @@ export function PreviewEditor() {
           addGeneratedSection(errorSection);
         }
       } catch (error) {
-        console.error(`Failed to generate ${sectionId}:`, error);
+        logger.error(`Failed to generate ${sectionId}:`, error);
       }
     }
 
@@ -365,9 +366,13 @@ export function PreviewEditor() {
                     <li className="text-slate-700 dark:text-slate-300">{children}</li>
                   ),
                   
-                  // Code - Responsive
-                  code: ({ inline, className, children }) => {
-                    if (inline) {
+                  // Code - Fixed type
+                  code: (props) => {
+                    const { children, className } = props as { children?: React.ReactNode; className?: string };
+                    const match = /language-(\w+)/.exec(className || '');
+                    const isInline = !match;
+                    
+                    if (isInline) {
                       return (
                         <code className="px-1 sm:px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 
                                        text-red-600 dark:text-red-400 text-xs sm:text-sm font-mono">
@@ -446,9 +451,11 @@ export function PreviewEditor() {
                     </a>
                   ),
                   
-                  // Images (including badges)
-                  img: ({ src, alt }) => {
+                  // Images (including badges) - Fixed to use regular img tag
+                  img: (props) => {
+                    const { src, alt } = props as { src?: string; alt?: string };
                     let fixedSrc = src || '';
+                    const altText = alt || 'image';
                     
                     if (fixedSrc.includes('shields.io') && githubInfo) {
                       fixedSrc = fixedSrc
@@ -467,9 +474,10 @@ export function PreviewEditor() {
                     
                     if (isBadge) {
                       return (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img 
                           src={fixedSrc} 
-                          alt={alt || 'badge'} 
+                          alt={altText} 
                           className="inline-block h-4 sm:h-5 mr-1"
                           onError={(e) => {
                             (e.target as HTMLImageElement).style.display = 'none';
@@ -479,9 +487,10 @@ export function PreviewEditor() {
                     }
                     
                     return (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img 
                         src={fixedSrc} 
-                        alt={alt || 'image'} 
+                        alt={altText} 
                         className="max-w-full h-auto rounded-lg my-4"
                         onError={(e) => {
                           (e.target as HTMLImageElement).style.display = 'none';

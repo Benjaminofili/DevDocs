@@ -2,22 +2,22 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { redis } from '@/lib/rate-limit';
-
-interface ClearCacheRequestBody {
-  projectName: string;
-}
+import { ClearCacheRequestSchema } from '@/lib/validators/schemas';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json() as ClearCacheRequestBody;
-    const { projectName } = body;
+    const json = await request.json();
+    const parseResult = ClearCacheRequestSchema.safeParse(json);
 
-    if (!projectName) {
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'Project name is required' },
+        { error: 'Invalid request', details: parseResult.error.format() },
         { status: 400 }
       );
     }
+
+    const { projectName } = parseResult.data;
 
     // ✅ Fix: cursor is a string in Upstash
     let cursor = '0';
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
         keysToDelete.push(...projectKeys);
 
       } catch (scanError) {
-        console.error('Scan error:', scanError);
+        logger.error('Scan error:', scanError);
         break;
       }
     } while (cursor !== '0');
@@ -60,9 +60,9 @@ export async function POST(request: NextRequest) {
         await Promise.all(batch.map(key => redis.del(key)));
         deletedCount += batch.length;
       }
-      console.log(`🗑️ Cleared ${deletedCount} cache entries for project: ${projectName}`);
+      logger.cache('del', `Cleared ${deletedCount} cache entries for project: ${projectName}`);
     } else {
-      console.log(`ℹ️ No cache entries found for project: ${projectName}`);
+      logger.info(`No cache entries found for project: ${projectName}`);
     }
 
     return NextResponse.json({
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Cache clear error:', errorMessage);
+    logger.error('Cache clear error:', error);
     return NextResponse.json(
       { error: 'Failed to clear cache', details: errorMessage },
       { status: 500 }
@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
         keysToDelete.push(...projectKeys);
 
       } catch (scanError) {
-        console.error('Scan error:', scanError);
+        logger.error('Scan error:', scanError);
         break;
       }
     } while (cursor !== '0');
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
         await Promise.all(batch.map(key => redis.del(key)));
         deletedCount += batch.length;
       }
-      console.log(`🗑️ Cleared ${deletedCount} cache entries for project: ${projectName}`);
+      logger.cache('del', `Cleared ${deletedCount} cache entries for project: ${projectName}`);
     }
 
     return NextResponse.json({
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Cache clear error:', errorMessage);
+    logger.error('Cache clear error:', error);
     return NextResponse.json(
       { error: 'Failed to clear cache', details: errorMessage },
       { status: 500 }

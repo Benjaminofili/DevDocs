@@ -4,6 +4,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { StackAnalyzer } from '@/lib/analyzers';
 import { getSectionsForStack } from '@/lib/bricks';
 import { redis } from '@/lib/rate-limit';
+import { AnalyzeRequestSchema } from '@/lib/validators/schemas';
+import { logger } from '@/lib/logger';
+import { getEnv } from '@/lib/env';
+import { GITHUB_CONFIG } from '@/config/constants';
 
 interface FileContent {
   name: string;
@@ -17,10 +21,24 @@ interface GitHubFile {
   download_url: string | null;
 }
 
+// Type helper for checking if a string is in the important files array
+const isImportantFile = (fileName: string): boolean => {
+  return (GITHUB_CONFIG.IMPORTANT_FILES as readonly string[]).includes(fileName);
+};
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { repoUrl, files } = body;
+    const json = await request.json();
+    const parseResult = AnalyzeRequestSchema.safeParse(json);
+
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: 'Invalid request', details: parseResult.error.format() },
+        { status: 400 }
+      );
+    }
+
+    const { repoUrl, files } = parseResult.data;
 
     // Redis Caching
     let cacheKey = '';
@@ -28,7 +46,7 @@ export async function POST(request: NextRequest) {
       cacheKey = `analyze:${repoUrl}`;
       const cached = await redis.get(cacheKey);
       if (cached) {
-        console.log(`✅ Cache hit for ${repoUrl}`);
+        logger.cache('hit', cacheKey);
         return NextResponse.json({ success: true, data: cached });
       }
     }
@@ -39,11 +57,6 @@ export async function POST(request: NextRequest) {
       fileContents = await fetchRepoContents(repoUrl);
     } else if (files) {
       fileContents = files;
-    } else {
-      return NextResponse.json(
-        { error: 'Provide either repoUrl or files' },
-        { status: 400 }
-      );
     }
 
     const analyzer = new StackAnalyzer(fileContents);
@@ -52,10 +65,10 @@ export async function POST(request: NextRequest) {
 
     // ✅ Extract comprehensive repo data
     const packageJsonFile = fileContents.find(f => f.name === 'package.json');
-    const existingReadme = fileContents.find(f => 
+    const existingReadme = fileContents.find(f =>
       f.name.toLowerCase() === 'readme.md' || f.name.toLowerCase() === 'readme'
     );
-    const envExample = fileContents.find(f => 
+    const envExample = fileContents.find(f =>
       f.name === '.env.example' || f.name === '.env.sample'
     );
 
@@ -64,7 +77,7 @@ export async function POST(request: NextRequest) {
       try {
         packageJson = JSON.parse(packageJsonFile.content);
       } catch {
-        console.warn('Failed to parse package.json');
+        logger.warn('Failed to parse package.json');
       }
     }
 
@@ -75,20 +88,20 @@ export async function POST(request: NextRequest) {
       packageJson,
       existingReadme: existingReadme?.content,
       envExample: envExample?.content,
-      hasDocker: fileContents.some(f => 
-        f.name === 'Dockerfile' || 
+      hasDocker: fileContents.some(f =>
+        f.name === 'Dockerfile' ||
         f.name === 'docker-compose.yml' ||
         f.name === 'docker-compose.yaml'
       ),
-      hasTests: fileContents.some(f => 
-        f.name.includes('test') || 
-        f.name.includes('spec') || 
+      hasTests: fileContents.some(f =>
+        f.name.includes('test') ||
+        f.name.includes('spec') ||
         f.name.includes('__tests__') ||
         f.name.includes('.test.') ||
         f.name.includes('.spec.')
       ),
-      hasCI: fileContents.some(f => 
-        f.name.includes('.github/workflows') || 
+      hasCI: fileContents.some(f =>
+        f.name.includes('.github/workflows') ||
         f.name.includes('.gitlab-ci') ||
         f.name.includes('azure-pipelines')
       ),
@@ -118,7 +131,7 @@ export async function POST(request: NextRequest) {
       data: result,
     });
   } catch (error) {
-    console.error('Analysis error:', error);
+    logger.error('Analysis error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { error: 'Failed to analyze repository', details: errorMessage },
@@ -133,14 +146,15 @@ async function fetchRepoContents(repoUrl: string): Promise<FileContent[]> {
 
   const [, owner, repo] = match;
   const cleanRepo = repo.replace('.git', '');
-  
+
   const headers: HeadersInit = {
     Accept: 'application/vnd.github.v3+json',
-    'User-Agent': 'README-Generator',
+    'User-Agent': GITHUB_CONFIG.USER_AGENT,
   };
 
-  if (process.env.GITHUB_TOKEN) {
-    headers.Authorization = `token ${process.env.GITHUB_TOKEN}`;
+  const env = getEnv();
+  if (env.GITHUB_TOKEN) {
+    headers.Authorization = `token ${env.GITHUB_TOKEN}`;
   }
 
   const fileContents: FileContent[] = [];
@@ -150,87 +164,58 @@ async function fetchRepoContents(repoUrl: string): Promise<FileContent[]> {
     `https://api.github.com/repos/${owner}/${cleanRepo}/contents`,
     { headers }
   );
-  
+
   if (!rootResponse.ok) {
     const errorText = await rootResponse.text();
-    console.error('GitHub API error:', errorText);
+    logger.error('GitHub API error:', { error: errorText });
     throw new Error(`Failed to fetch repository: ${rootResponse.status} ${rootResponse.statusText}`);
   }
 
   const rootContents: GitHubFile[] = await rootResponse.json();
 
-  // ✅ Important files to fetch with full content
-  const importantFiles = [
-    'package.json',
-    'requirements.txt',
-    'pyproject.toml',
-    'go.mod',
-    'Cargo.toml',
-    '.env.example',
-    '.env.sample',
-    'Dockerfile',
-    'docker-compose.yml',
-    'docker-compose.yaml',
-    'README.md',
-    'readme.md',
-    'README',
-    'tsconfig.json',
-    'next.config.js',
-    'next.config.mjs',
-    'next.config.ts',
-    'vite.config.ts',
-    'vite.config.js',
-    'tailwind.config.js',
-    'tailwind.config.ts',
-    'app.json',
-    'setup.py',
-    'setup.cfg',
-    'Makefile',
-  ];
-
   // Fetch important files with content
   for (const file of rootContents) {
-    if (importantFiles.includes(file.name) && file.type === 'file' && file.download_url) {
+    if (isImportantFile(file.name) && file.type === 'file' && file.download_url) {
       try {
         const fileResponse = await fetch(file.download_url);
         if (fileResponse.ok) {
           const content = await fileResponse.text();
           fileContents.push({ name: file.name, content });
-          console.log(`📄 Fetched: ${file.name} (${content.length} chars)`);
+          logger.debug(`Fetched: ${file.name} (${content.length} chars)`);
         }
       } catch (error) {
-        console.warn(`Failed to fetch ${file.name}:`, error);
+        logger.warn(`Failed to fetch ${file.name}:`, { error });
         fileContents.push({ name: file.name, content: '' });
       }
     }
   }
 
   // ✅ Fetch directory structures (src, app, pages, etc.)
-  const importantDirs = ['src', 'app', 'pages', 'components', 'lib', 'utils', 'api', 'routes'];
-  
+  const importantDirs = GITHUB_CONFIG.IMPORTANT_DIRECTORIES;
+
   for (const dir of importantDirs) {
     const dirEntry = rootContents.find(f => f.name === dir && f.type === 'dir');
-    
+
     if (dirEntry) {
       try {
         const dirResponse = await fetch(
           `https://api.github.com/repos/${owner}/${cleanRepo}/contents/${dir}`,
           { headers }
         );
-        
+
         if (dirResponse.ok) {
           const dirContents: GitHubFile[] = await dirResponse.json();
           for (const file of dirContents) {
             // Add to structure without fetching content
-            fileContents.push({ 
-              name: `${dir}/${file.name}`, 
-              content: '' 
+            fileContents.push({
+              name: `${dir}/${file.name}`,
+              content: ''
             });
           }
-          console.log(`📁 Scanned directory: ${dir} (${dirContents.length} items)`);
+          logger.debug(`Scanned directory: ${dir} (${dirContents.length} items)`);
         }
       } catch (error) {
-        console.warn(`Failed to fetch ${dir} directory:`, error);
+        logger.warn(`Failed to fetch ${dir} directory:`, { error });
       }
     }
   }
@@ -241,16 +226,16 @@ async function fetchRepoContents(repoUrl: string): Promise<FileContent[]> {
       `https://api.github.com/repos/${owner}/${cleanRepo}/contents/.github/workflows`,
       { headers }
     );
-    
+
     if (workflowResponse.ok) {
       const workflows: GitHubFile[] = await workflowResponse.json();
       for (const file of workflows) {
-        fileContents.push({ 
-          name: `.github/workflows/${file.name}`, 
-          content: '' 
+        fileContents.push({
+          name: `.github/workflows/${file.name}`,
+          content: ''
         });
       }
-      console.log(`🔄 Found ${workflows.length} workflow files`);
+      logger.debug(`Found ${workflows.length} workflow files`);
     }
   } catch {
     // No workflows, that's fine
@@ -263,7 +248,6 @@ async function fetchRepoContents(repoUrl: string): Promise<FileContent[]> {
     }
   }
 
-  console.log(`📊 Total files analyzed: ${fileContents.length}`);
+  logger.info(`Total files analyzed: ${fileContents.length}`);
   return fileContents;
 }
-

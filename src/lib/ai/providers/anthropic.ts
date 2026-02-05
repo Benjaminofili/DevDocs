@@ -1,14 +1,11 @@
+// src/lib/ai/providers/anthropic.ts
+
 import Anthropic from '@anthropic-ai/sdk';
 import { AIResponse } from '@/types';
 import { AIProviderInterface } from './base';
 import { getEnv } from '@/lib/env';
 import { logger } from '@/lib/logger';
 import { AI_CONFIG } from '@/config/constants';
-
-interface TextBlock {
-  type: 'text';
-  text: string;
-}
 
 export class AnthropicProvider implements AIProviderInterface {
   private client: Anthropic | null = null;
@@ -54,10 +51,15 @@ export class AnthropicProvider implements AIProviderInterface {
         ],
       });
 
-      // Extract text from Claude's response
+      // Extract text from Claude's response - fixed for latest SDK
       const content = message.content
-        .filter((block): block is TextBlock => block.type === 'text')
-        .map((block) => block.text)
+        .filter((block) => block.type === 'text')
+        .map((block) => {
+          if (block.type === 'text') {
+            return block.text;
+          }
+          return '';
+        })
         .join('\n');
 
       return {

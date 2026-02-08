@@ -4,6 +4,7 @@
 
 import { useState } from 'react'
 import { UsageMeter } from '@/components/tiers/UsageMeter'
+import { Header } from '@/components/layout/Header'
 import type { SavedReadme, UserProfile } from '@/types'
 import Link from 'next/link'
 
@@ -38,7 +39,9 @@ export function DashboardClient({ readmes: initialReadmes, profile }: DashboardC
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <>
+      <Header />
+      <div className="mx-auto max-w-4xl px-4 py-8">
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
@@ -137,5 +140,6 @@ export function DashboardClient({ readmes: initialReadmes, profile }: DashboardC
         </div>
       )}
     </div>
+    </>
   )
 }

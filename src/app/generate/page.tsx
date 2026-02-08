@@ -3,7 +3,13 @@
 'use client';
 
 import { ReadmeWizard } from '@/components/wizard/ReadmeWizard';
+import { Header } from '@/components/layout/Header';
 
 export default function GeneratePage() {
-  return <ReadmeWizard />;
+  return (
+    <>
+      <Header />
+      <ReadmeWizard />
+    </>
+  );
 }

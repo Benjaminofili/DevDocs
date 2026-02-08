@@ -8,10 +8,13 @@ import {
   CheckCircle,
   Github,
 } from 'lucide-react';
+import { Header } from '@/components/layout/Header';
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <>
+      <Header />
+      <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pt-24 pb-20 text-center">
@@ -301,5 +304,6 @@ export default function Home() {
         </div>
       </footer>
     </main>
+    </>
   );
 }

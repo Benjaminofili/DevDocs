@@ -7,13 +7,15 @@ import type { UserTier, TierConfig } from '@/types'
 // SECTION DEFINITIONS
 // ============================================
 
-// Basic sections available to everyone
+// Basic sections available to everyone (anonymous)
+// These IDs MUST match SECTION_BRICKS in src/lib/bricks/index.ts
 export const BASIC_SECTIONS = [
-  'introduction',
+  'header',
   'installation',
-  'usage',
+  'environment',
   'license',
-  'env-variables',
+  'docker',
+  'scripts',
 ] as const
 
 // Extra sections for logged-in free users
@@ -21,23 +23,15 @@ export const FREE_SECTIONS = [
   ...BASIC_SECTIONS,
   'tech-stack',
   'features',
-  'folder-structure',
-  'screenshots',
+  'api-docs',
+  'deployment',
 ] as const
 
 // All sections for premium users
 export const PREMIUM_SECTIONS = [
   ...FREE_SECTIONS,
   'contributing',
-  'code-of-conduct',
   'testing',
-  'deployment',
-  'api-documentation',
-  'security',
-  'changelog',
-  'troubleshooting',
-  'acknowledgements',
-  'roadmap',
 ] as const
 
 // ============================================
@@ -46,7 +40,7 @@ export const PREMIUM_SECTIONS = [
 
 export const TIER_CONFIGS: Record<UserTier, TierConfig> = {
   anonymous: {
-    maxGenerationsPerDay: 2,
+    maxGenerationsPerDay: 5,
     maxSavedReadmes: 0,
     availableSections: [...BASIC_SECTIONS],
     teachingDepth: 'basic',
@@ -57,7 +51,7 @@ export const TIER_CONFIGS: Record<UserTier, TierConfig> = {
   },
 
   free: {
-    maxGenerationsPerDay: 5,
+    maxGenerationsPerDay: 50,
     maxSavedReadmes: 10,
     availableSections: [...FREE_SECTIONS],
     teachingDepth: 'standard',
@@ -108,12 +102,12 @@ export async function getUserTier(userId: string): Promise<UserTier> {
   // Import dynamically to avoid circular dependencies
   const { createClient } = await import('@/supabase/server')
   const supabase = await createClient()
-  
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('tier')
     .eq('id', userId)
     .single()
-  
+
   return (profile?.tier as UserTier) ?? 'free'
 }

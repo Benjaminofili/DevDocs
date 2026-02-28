@@ -49,16 +49,16 @@ interface GeneratedSectionResult {
 // ========== NEW: Response helper for session cookies ==========
 function createJsonResponse(
   body: Record<string, unknown>,
-  options: { 
-    status?: number; 
+  options: {
+    status?: number;
     headers?: Record<string, string>;
     sessionId?: string;
     isNewSession?: boolean;
   } = {}
 ): NextResponse {
-  const response = NextResponse.json(body, { 
+  const response = NextResponse.json(body, {
     status: options.status || 200,
-    headers: options.headers 
+    headers: options.headers
   });
 
   // Set session cookie for anonymous users
@@ -119,8 +119,8 @@ export async function POST(request: NextRequest) {
       }
     } catch (authError) {
       // CRITICAL: Auth failures must NOT break generation
-      logger.warn('Auth check failed, continuing as anonymous', { 
-        error: authError instanceof Error ? authError.message : 'Unknown' 
+      logger.warn('Auth check failed, continuing as anonymous', {
+        error: authError instanceof Error ? authError.message : 'Unknown'
       });
     }
     // ==================================================================
@@ -208,8 +208,8 @@ export async function POST(request: NextRequest) {
           sectionId,
           requiredTier,
           currentTier: tier,
-          action: tier === 'anonymous' 
-            ? 'Sign in for free to unlock more sections' 
+          action: tier === 'anonymous'
+            ? 'Sign in for free to unlock more sections'
             : 'Join the waitlist for premium access',
           waitlistFeature: 'premium-sections',
         },
@@ -224,9 +224,9 @@ export async function POST(request: NextRequest) {
       usageResult = await checkUsageLimit(userId, sessionId, tier);
 
       if (!usageResult.allowed) {
-        logger.info('Usage limit reached', { 
-          userId, 
-          tier, 
+        logger.info('Usage limit reached', {
+          userId,
+          tier,
           limit: usageResult.limit,
           used: usageResult.used,
         });
@@ -245,8 +245,8 @@ export async function POST(request: NextRequest) {
               remaining: 0,
               resetAt: usageResult.resetAt,
             },
-            action: tier === 'anonymous' 
-              ? 'sign_in' 
+            action: tier === 'anonymous'
+              ? 'sign_in'
               : 'join_waitlist',
             waitlistFeature: 'unlimited-generations',
           },
@@ -316,11 +316,13 @@ export async function POST(request: NextRequest) {
 
       // ========== NEW: Track usage even for cached responses ==========
       try {
-        await incrementUsage(userId, sessionId, tier, {
-          action: 'generate',
-          stack: stack.primary,
-          repoUrl: repoUrl || null,
-        });
+        if (isFirstSection) { // Fix: ID: cdf55f89-1668-49e4-b597-edde9b9a0976
+          await incrementUsage(userId, sessionId, tier, {
+            action: 'generate',
+            stack: stack.primary,
+            repoUrl: repoUrl || null,
+          });
+        }
       } catch (trackErr) {
         logger.warn('Usage tracking failed for cached response', {
           error: trackErr instanceof Error ? trackErr.message : 'Unknown'
@@ -388,15 +390,31 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // ========== NEW: Track usage after successful generation ==========
+      // ========== NEW: Track usage and history after successful generation ==========
       try {
-        await incrementUsage(userId, sessionId, tier, {
-          action: 'generate',
+        if (isFirstSection) {
+          await incrementUsage(userId, sessionId, tier, {
+            action: 'generate',
+            stack: stack.primary,
+            repoUrl: repoUrl || null,
+          });
+        }
+
+        // Always insert into generation_history table per-section
+        const supabase = await createClient();
+        await supabase.from('generation_history').insert({
+          user_id: userId,
+          session_id: sessionId,
+          repo_url: repoUrl || null,
+          project_name: projectName,
           stack: stack.primary,
-          repoUrl: repoUrl || null,
+          section_id: sectionId,
+          content: response.content,
+          provider: response.provider,
+          tier: tier
         });
       } catch (trackErr) {
-        logger.warn('Usage tracking failed', {
+        logger.warn('Usage/History tracking failed', {
           error: trackErr instanceof Error ? trackErr.message : 'Unknown',
           sectionId,
         });

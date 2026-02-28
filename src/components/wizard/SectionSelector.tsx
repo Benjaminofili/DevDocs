@@ -63,6 +63,7 @@ export function SectionSelector() {
             projectName,
             repoUrl, // ✅ Pass repoUrl
             repoData, // ✅ Pass actual repo data
+            isFirstSection: i === 0, // ✅ Only charge usage on the first section of a generation run
           }),
         });
 

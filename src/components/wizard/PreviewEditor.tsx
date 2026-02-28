@@ -141,10 +141,18 @@ export function PreviewEditor() {
           addGeneratedSection(section);
         } else {
           logger.error(`Failed to generate ${sectionId}:`, data.error);
+          
+          const isTierError = data.error?.toLowerCase().includes('tier') || response.status === 403;
+          let errorText = `*Content generation failed. ${data.error || 'Please try again.'}*`;
+          
+          if (isTierError) {
+             errorText = `> **Premium Feature Locked** 🔒\n>\n> ${data.error || 'Upgrade to access this section.'}\n\n[Upgrade to Premium](/pricing)`;
+          }
+
           const errorSection: GeneratedSection = {
             id: sectionId,
-            content: `## ${sectionId.charAt(0).toUpperCase() + sectionId.slice(1)}\n\n*Content generation failed. Please try again.*`,
-            explanation: 'Generation failed - please retry.',
+            content: `## ${sectionId.charAt(0).toUpperCase() + sectionId.slice(1)}\n\n${errorText}`,
+            explanation: data.error || 'Generation failed - please retry.',
           };
           addGeneratedSection(errorSection);
         }

@@ -101,7 +101,14 @@ export function isSectionAvailable(
   tier: UserTier
 ): boolean {
   const config = TIER_CONFIGS[tier]
-  return config.availableSections.includes(sectionId)
+  // If the section is in the user's tier config, it's available
+  if (config.availableSections.includes(sectionId)) return true
+  // If the section isn't in ANY tier config (unknown/new section),
+  // allow it by default to avoid accidental 403 blocks
+  const allKnownSections = TIER_CONFIGS.premium.availableSections
+  if (!allKnownSections.includes(sectionId)) return true
+  // Section exists in a higher tier but not the user's tier
+  return false
 }
 
 export function getLockedSections(tier: UserTier): string[] {
@@ -126,12 +133,16 @@ export function getUpgradeReason(
 // ============================================
 
 export function getSectionTierRequirement(sectionId: string): UserTier {
-  // Check which tier has access to this section
+  // Check from lowest tier to highest — return the first tier that includes it
+  if (TIER_CONFIGS.anonymous.availableSections.includes(sectionId)) {
+    return 'anonymous'
+  }
+  if (TIER_CONFIGS.free.availableSections.includes(sectionId)) {
+    return 'free'
+  }
   if (TIER_CONFIGS.premium.availableSections.includes(sectionId)) {
-    if (TIER_CONFIGS.free.availableSections.includes(sectionId)) {
-      return 'free'
-    }
     return 'premium'
   }
+  // Unknown section — default to anonymous (allow access)
   return 'anonymous'
 }

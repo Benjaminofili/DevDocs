@@ -42,21 +42,31 @@ export function DashboardClient({ readmes: initialReadmes, profile }: DashboardC
     <>
       <Header />
       <div className="mx-auto max-w-4xl px-4 py-8">
-      {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">My READMEs</h1>
-          <p className="text-sm text-neutral-400">
-            {readmes.length} saved README{readmes.length !== 1 ? 's' : ''}
-          </p>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Dashboard</h1>
+        <div className="flex gap-4 border-b border-slate-200 dark:border-slate-700 pb-px mb-6 flex-wrap justify-between items-end">
+          <div className="flex gap-4">
+            <Link
+              href="/dashboard"
+              className="px-4 py-2 text-sm font-medium border-b-2 border-emerald-500 text-emerald-600 dark:text-emerald-400"
+            >
+              Saved READMEs
+            </Link>
+            <Link
+              href="/dashboard/history"
+              className="px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+            >
+              Generation History
+            </Link>
+          </div>
+          <Link
+            href="/generate"
+            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium 
+                       text-white hover:bg-emerald-500 transition-colors"
+          >
+            + Generate New
+          </Link>
         </div>
-        <Link
-          href="/"
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium 
-                     text-white hover:bg-emerald-500 transition-colors"
-        >
-          + Generate New
-        </Link>
       </div>
 
       {/* Usage Meter */}

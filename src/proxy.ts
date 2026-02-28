@@ -1,10 +1,10 @@
-// src/middleware.ts (ROOT of src folder, NOT inside lib)
+// src/proxy.ts (ROOT of src folder, NOT inside lib)
 // Next.js middleware - runs on every matching request
 
 import { updateSession } from '@/supabase/middleware'
 import { type NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   return await updateSession(request)
 }
 
